@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "982063479058",
+    "project_id": "tapori-ai-b8641",
+    "storage_bucket": "tapori-ai-b8641.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:982063479058:android:0543d19441b541704bdbcb",
+        "android_client_info": {
+          "package_name": "com.sparkstudios.taporiai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "982063479058-h3d3h9s9nsreb241e74okdpgsrmdk36l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE49zc-DPcv7wjhRJFRdNSXSjCUOKCAXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "982063479058-h3d3h9s9nsreb241e74okdpgsrmdk36l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:982063479058:android:d0005b4521ae3d964bdbcb",
+        "android_client_info": {
+          "package_name": "com.tapori.ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "982063479058-h3d3h9s9nsreb241e74okdpgsrmdk36l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE49zc-DPcv7wjhRJFRdNSXSjCUOKCAXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "982063479058-h3d3h9s9nsreb241e74okdpgsrmdk36l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

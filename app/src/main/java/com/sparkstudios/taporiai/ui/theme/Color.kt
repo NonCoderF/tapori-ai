@@ -1,4 +1,4 @@
-package com.sparkstudios.taporai.ui.theme
+package com.sparkstudios.taporiai.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
