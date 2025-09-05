@@ -8,15 +8,15 @@ object Prefs {
     private const val USER_ID = "user_id"
     private const val USER_NAME = "user_name"
 
-    fun saveUser(context: Context, userId: String, userName: String?) {
+    fun saveUser(context: Context, userIdToken: String, userName: String?) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit {
-                putString(USER_ID, userId)
+                putString(USER_ID, userIdToken)
                     .putString(USER_NAME, userName)
             }
     }
 
-    fun getUserId(context: Context): String? {
+    fun getUserIdToken(context: Context): String? {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(USER_ID, null)
     }

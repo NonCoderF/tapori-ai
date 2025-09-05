@@ -30,6 +30,7 @@ fun SignInScreen(navController: NavController) {
         context,
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
+            .requestIdToken(CLIENT_ID)
             .build()
     )
 
@@ -39,7 +40,7 @@ fun SignInScreen(navController: NavController) {
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account: GoogleSignInAccount = task.getResult(ApiException::class.java)!!
-            Prefs.saveUser(context, account.id ?: "", account.displayName)
+            Prefs.saveUser(context, account.idToken ?: "", account.displayName)
             navController.navigate(Screen.Home.route) {
                 popUpTo(Screen.SignIn.route) { inclusive = true }
             }

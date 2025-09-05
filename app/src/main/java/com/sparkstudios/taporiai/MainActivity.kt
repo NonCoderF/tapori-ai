@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val context = LocalContext.current
     val navController = rememberNavController()
-    val startDestination = if (Prefs.getUserId(context) == null) Screen.SignIn.route else Screen.Home.route
+    val startDestination = if (Prefs.getUserIdToken(context) == null) Screen.SignIn.route else Screen.Home.route
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Screen.SignIn.route) { SignInScreen(navController) }
