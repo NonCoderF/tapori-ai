@@ -32,4 +32,15 @@ object Prefs {
                 clear()
             }
     }
+
+    fun saveChatId(context: Context, chatId: String) {
+        val prefs = context.getSharedPreferences("tapori_ai_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("chat_id", chatId).apply()
+    }
+
+    fun getChatId(context: Context): String? {
+        val prefs = context.getSharedPreferences("tapori_ai_prefs", Context.MODE_PRIVATE)
+        return prefs.getString("chat_id", null)
+    }
+
 }

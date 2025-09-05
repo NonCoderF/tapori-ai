@@ -1,19 +1,20 @@
 package com.sparkstudios.taporiai
 
-import android.content.Intent
-import android.util.Log
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -39,7 +40,6 @@ fun SignInScreen(navController: NavController) {
         try {
             val account: GoogleSignInAccount = task.getResult(ApiException::class.java)!!
             Prefs.saveUser(context, account.id ?: "", account.displayName)
-            Log.e("TAG", "Google Sign In Result : ${account.id}")
             navController.navigate(Screen.Home.route) {
                 popUpTo(Screen.SignIn.route) { inclusive = true }
             }
@@ -49,7 +49,9 @@ fun SignInScreen(navController: NavController) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

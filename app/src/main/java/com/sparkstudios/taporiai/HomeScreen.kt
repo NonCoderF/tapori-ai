@@ -18,6 +18,7 @@ import com.sparkstudios.taporiai.network.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -53,16 +54,23 @@ fun HomeScreen(navController: NavController) {
                 isLoading = true
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val chatId = Prefs.getChatId(context) ?: UUID.randomUUID().toString().also {
+                            Prefs.saveChatId(context, it)
+                        }
+
+                        val userId = Prefs.getUserId(context) ?: ""
+
+                        Log.e("TAG", "userId: $userId , $chatId")
+
                         val response = RetrofitClient.apiService.sendMessage(
                             ChatRequest(
-                                user_id = Prefs.getUserId(context).toString(),
+                                user_id = userId,
                                 chat_id = "existing-chat-id-uuid",
                                 prompt = inputText,
                                 system_message = "You are a Mumbai Tapori assistant. Reply in Mumbai slang hinglish language fully.",
-                                max_context_messages = 20
+                                max_context_messages = 50
                             )
                         )
-                        Log.e("TAG", "Retrofit Response : ${response.body()}")
                         if (response.isSuccessful) {
                             responseText = response.body()?.reply ?: "No response"
                         } else {
