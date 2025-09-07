@@ -28,10 +28,36 @@ data class CreditResponse(
     val credits: Int? = null
 )
 
+data class ChatDownloadRequest(
+    val idToken: String,
+)
+
+data class ChatDownloadResponse(
+    val success: Boolean,
+    val chats: List<ChatMessageDto>
+)
+
+data class ChatMessageDto(
+    val id: String,
+    val user_id: String,
+    val chat_id: String,
+    val role: String,
+    val content: String,
+    val created_at: String
+)
+
+data class ErrorResponse(
+    val error: String
+)
+
 interface ApiService {
     @POST("chat")
     suspend fun sendMessage(@Body request: ChatRequest): Response<ChatResponse>
 
     @POST("add_credits")
     suspend fun addCredit(@Body request: CreditRequest): Response<CreditResponse>
+
+    @POST("download")
+    suspend fun downloadChat(@Body request: ChatDownloadRequest): Response<ChatDownloadResponse>
+
 }

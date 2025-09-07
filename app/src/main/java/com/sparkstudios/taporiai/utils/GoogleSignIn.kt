@@ -1,6 +1,8 @@
 package com.sparkstudios.taporiai.utils
 
+import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.sparkstudios.taporiai.utils.Prefs
@@ -31,7 +33,16 @@ fun refreshToken(context: Context, onRefreshed: () -> Unit = {}, onFailure: () -
     }
 }
 
-fun logout(context: Context) = {
-    GoogleSignIn.getClient(context, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+fun logout(context: Context) {
+    val googleSignInClient = GoogleSignIn.getClient(
+        context,
+        GoogleSignInOptions.DEFAULT_SIGN_IN
+    )
     Prefs.clearUser(context)
+    context.cacheDir?.deleteRecursively()
+    context.filesDir?.deleteRecursively()
+
+    googleSignInClient.signOut().addOnCompleteListener {
+        googleSignInClient.revokeAccess()
+    }
 }

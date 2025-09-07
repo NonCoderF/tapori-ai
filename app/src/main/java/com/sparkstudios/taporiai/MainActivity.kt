@@ -41,16 +41,18 @@ class MainActivity : ComponentActivity(),PaymentResultListener {
     override fun onPaymentError(p0: Int, p1: String?) {
         Log.e("TAG", "Paymnet fail : " + p1.toString())
     }
-}
 
-@Composable
-fun AppNavigation() {
-    val context = LocalContext.current
-    val navController = rememberNavController()
-    val startDestination = if (Prefs.getUserIdToken(context) == null) Screen.SignIn.route else Screen.Home.route
+    @Composable
+    fun AppNavigation() {
+        val context = LocalContext.current
+        val navController = rememberNavController()
+        val startDestination = if (Prefs.getUserIdToken(context) == null) Screen.SignIn.route else Screen.Home.route
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(Screen.SignIn.route) { SignInScreen(navController) }
-        composable(Screen.Home.route) { ChatScreen() }
+        NavHost(navController = navController, startDestination = startDestination) {
+            composable(Screen.SignIn.route) { SignInScreen(navController) }
+            composable(Screen.Home.route) {
+                ChatScreen(navController,
+                    onClose = { finish() }) }
+        }
     }
 }
