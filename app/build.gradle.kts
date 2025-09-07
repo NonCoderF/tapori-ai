@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.sparkstudios.taporiai"
+    namespace = "com.sparkstudios.tapori.ai"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.sparkstudios.taporiai"
+        applicationId = "com.sparkstudios.tapori.ai"
         minSdk = 24
         //noinspection OldTargetApi
         targetSdk = 35

@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import com.sparkstudios.taporiai.R
+import com.sparkstudios.tapori.ai.R
 
 val Poppins = FontFamily(
     Font(R.font.poppins, FontWeight.Normal),

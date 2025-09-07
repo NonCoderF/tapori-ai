@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.gson.Gson
-import com.sparkstudios.taporiai.R
+import com.sparkstudios.tapori.ai.R
 import com.sparkstudios.taporiai.Screen
 import com.sparkstudios.taporiai.network.ChatDownloadRequest
 import com.sparkstudios.taporiai.network.ErrorResponse
