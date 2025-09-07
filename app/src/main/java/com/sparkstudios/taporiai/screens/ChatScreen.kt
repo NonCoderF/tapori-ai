@@ -1,5 +1,7 @@
 package com.sparkstudios.taporiai.screens
 
+import android.app.Activity
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.gson.Gson
+import com.razorpay.Checkout
 import com.sparkstudios.tapori.ai.R
 import com.sparkstudios.taporiai.Screen
 import com.sparkstudios.taporiai.network.ChatDownloadRequest
@@ -73,7 +76,11 @@ data class ChatMessage(
 )
 
 @Composable
-fun ChatScreen(navController: NavController, onClose : () -> Unit) {
+fun ChatScreen(
+    navController: NavController,
+    onClose : () -> Unit,
+    onPaymentInvoked : () -> Unit,
+) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -89,6 +96,7 @@ fun ChatScreen(navController: NavController, onClose : () -> Unit) {
     var loadingError: String? by remember { mutableStateOf(null) }
     var chatError: String? by remember { mutableStateOf(null) }
     var loadingErrorResponseCode : Int? by remember { mutableStateOf(null) }
+    var chatErrorResponseCode : Int? by remember { mutableStateOf(null) }
     var showCloseAlertDialog by remember { mutableStateOf(false) }
     var showLogoutAlertDialog by remember { mutableStateOf(false) }
 
@@ -283,6 +291,7 @@ fun ChatScreen(navController: NavController, onClose : () -> Unit) {
                                                         )
                                                         isSending = false
                                                     }else{
+                                                        chatErrorResponseCode = response.code()
                                                         if (response.code() == 402){
                                                             val responseText = if (response.code() == 402) {
                                                                 val json =
@@ -369,6 +378,13 @@ fun ChatScreen(navController: NavController, onClose : () -> Unit) {
                             .background(Color.White),
                         reverseLayout = true
                     ) {
+                        if (chatErrorResponseCode == 402) {
+                            item {
+                                PayButton(text = "Paisa dalo") {
+                                    onPaymentInvoked.invoke()
+                                }
+                            }
+                        }
                         items(messages.reversed()) { message ->
                             ChatBubble(message)
                         }
@@ -496,6 +512,26 @@ fun RetryButton(
         )
     }
 }
+
+@Composable
+fun PayButton(
+    text : String,
+    onPay: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = { onPay() },
+        modifier = Modifier
+            .padding(horizontal = 16.dp),
+    ) {
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 16.sp
+        )
+    }
+}
+
+
 
 @Composable
 fun ChatAlertDialog(

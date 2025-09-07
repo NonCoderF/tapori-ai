@@ -38,5 +38,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.sparkstudios.taporiai.PaymentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TaporiAI">
+        </activity>
+
     </application>
 </manifest>

@@ -1,5 +1,6 @@
 package com.sparkstudios.taporiai
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
 import com.sparkstudios.taporiai.screens.ChatScreen
-import com.sparkstudios.taporiai.screens.HomeScreen
+import com.sparkstudios.taporiai.screens.CreditPacksScreen
 import com.sparkstudios.taporiai.screens.SignInScreen
 import com.sparkstudios.taporiai.ui.theme.TaporiAITheme
 import com.sparkstudios.taporiai.utils.Prefs
@@ -25,7 +26,6 @@ sealed class Screen(val route: String) {
 
 class MainActivity : ComponentActivity(), PaymentResultListener {
     override fun onCreate(savedInstanceState: Bundle?) {
-        Checkout.preload(applicationContext)
         super.onCreate(savedInstanceState)
         setContent {
             TaporiAITheme {
@@ -52,7 +52,12 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
             composable(Screen.SignIn.route) { SignInScreen(navController) }
             composable(Screen.Home.route) {
                 ChatScreen(navController,
-                    onClose = { finish() }) }
+                    onClose = { finish() },
+                    onPaymentInvoked = {
+                        startActivity(Intent(this@MainActivity, PaymentActivity::class.java))
+                    }
+                )
+            }
         }
     }
 }
