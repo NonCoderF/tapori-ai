@@ -68,8 +68,8 @@ fun CreditPacksScreen(onBuyClick: (price: Int, chats: Int) -> Unit) {
                     Text(
                         text = when (price) {
                             10 -> "Sasta aur tikau, bas shuruat ke liye."
-                            49 -> "Thoda zyada, mast discount ke saath."
-                            99 -> "Hardcore bhidus ke liye, ekdum unlimited jaisa feel."
+                            50 -> "Thoda zyada, mast discount ke saath."
+                            250 -> "Hardcore bhidus ke liye, ekdum unlimited jaisa feel."
                             else -> ""
                         },
                         style = MaterialTheme.typography.bodySmall,

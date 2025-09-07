@@ -8,6 +8,13 @@ import android.widget.Toast.LENGTH_SHORT
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
@@ -24,25 +31,39 @@ import org.json.JSONObject
 class PaymentActivity : ComponentActivity(), PaymentResultListener {
 
     private var creditsToAdd = 0
+    private var showLoader by mutableStateOf(false)
+    private var showSuccessDialog by mutableStateOf(false)
+    private var newCredits by mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             TaporiAITheme {
-                CreditPacksScreen(
-                    onBuyClick = { price, chats ->
-                        creditsToAdd = chats
-                        startPayment(this, price)
-                    }
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CreditPacksScreen(
+                        onBuyClick = { price, chats ->
+                            creditsToAdd = chats
+                            startPayment(this@PaymentActivity, price)
+                        }
+                    )
 
-                BackHandler {  }
+                    if (showLoader) {
+                        LoaderDialog()
+                    }
+
+                    if (showSuccessDialog) {
+                        SuccessDialog(
+                            credits = newCredits,
+                            onDismiss = { showSuccessDialog = false }
+                        )
+                    }
+                }
             }
         }
     }
 
-
     override fun onPaymentSuccess(p0: String?) {
+        showLoader = true
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.apiService.addCredit(
@@ -53,18 +74,14 @@ class PaymentActivity : ComponentActivity(), PaymentResultListener {
                 )
 
                 if (response.isSuccessful) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        Toast.makeText(
-                            this@PaymentActivity,
-                            response.body()?.message,
-                            LENGTH_SHORT
-                        ).show()
-                    }
+                    val credits = response.body()?.credits ?: 0
+                    newCredits = credits
+                    showSuccessDialog = true
                 }
             } catch (e: Exception) {
                 Log.e("Exception", e.toString())
             } finally {
-
+                showLoader = false
             }
         }
     }
@@ -73,7 +90,7 @@ class PaymentActivity : ComponentActivity(), PaymentResultListener {
         Toast.makeText(this, "Payment failed: $p1", Toast.LENGTH_SHORT).show()
     }
 
-    fun startPayment(activity : Activity, amount : Int) {
+    fun startPayment(activity: Activity, amount: Int) {
         val checkout = Checkout()
         checkout.setKeyID("rzp_live_REoh16s1CW0W6Q")
 
@@ -95,6 +112,46 @@ class PaymentActivity : ComponentActivity(), PaymentResultListener {
             Toast.makeText(activity, "Error in payment: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-
 }
 
+@Composable
+fun LoaderDialog() {
+    Dialog(onDismissRequest = {}) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Ruk zara bhidu credit update ho raha hain...",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+    BackHandler(enabled = true) {}
+}
+
+@Composable
+fun SuccessDialog(credits: Int, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Theek hai bhidu")
+            }
+        },
+        title = { Text("Payment Successful! 💸") },
+        text = {
+            Text("Bhai, ab tere account mein $credits credits hain! ✨")
+        }
+    )
+}

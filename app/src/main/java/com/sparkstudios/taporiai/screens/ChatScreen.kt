@@ -381,6 +381,7 @@ fun ChatScreen(
                         if (chatErrorResponseCode == 402) {
                             item {
                                 PayButton(text = "Paisa dalo") {
+                                    chatErrorResponseCode = null
                                     onPaymentInvoked.invoke()
                                 }
                             }
