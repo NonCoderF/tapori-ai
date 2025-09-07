@@ -23,7 +23,7 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
 }
 
-class MainActivity : ComponentActivity(),PaymentResultListener {
+class MainActivity : ComponentActivity(), PaymentResultListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         Checkout.preload(applicationContext)
         super.onCreate(savedInstanceState)

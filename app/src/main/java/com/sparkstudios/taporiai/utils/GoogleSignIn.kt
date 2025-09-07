@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.sparkstudios.taporiai.utils.Prefs
 
 const val CLIENT_ID = "251119098046-ih3bq53nisp3fo39p6gmrfbth4mt2msb.apps.googleusercontent.com"
 

@@ -53,6 +53,7 @@ import com.google.gson.Gson
 import com.sparkstudios.tapori.ai.R
 import com.sparkstudios.taporiai.Screen
 import com.sparkstudios.taporiai.network.ChatDownloadRequest
+import com.sparkstudios.taporiai.network.ChatRequest
 import com.sparkstudios.taporiai.network.ErrorResponse
 import com.sparkstudios.taporiai.network.RetrofitClient
 import com.sparkstudios.taporiai.utils.Prefs
@@ -62,6 +63,8 @@ import com.sparkstudios.taporiai.utils.refreshToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.util.UUID
 
 data class ChatMessage(
     val id: Int,
@@ -84,6 +87,7 @@ fun ChatScreen(navController: NavController, onClose : () -> Unit) {
 
     var isLoading by remember { mutableStateOf(false) }
     var loadingError: String? by remember { mutableStateOf(null) }
+    var chatError: String? by remember { mutableStateOf(null) }
     var loadingErrorResponseCode : Int? by remember { mutableStateOf(null) }
     var showCloseAlertDialog by remember { mutableStateOf(false) }
     var showLogoutAlertDialog by remember { mutableStateOf(false) }
@@ -249,29 +253,60 @@ fun ChatScreen(navController: NavController, onClose : () -> Unit) {
                                     onMessageChange = { inputText = it },
                                     isSending = isSending,
                                     onSendClick = {
-
-                                        if (inputText.text.isNotBlank() && !isSending)
-                                            CoroutineScope(Dispatchers.IO).launch {
-
-                                            }
                                         if (inputText.text.isNotBlank() && !isSending) {
-                                            val newMessage = ChatMessage(
-                                                id = messages.size + 1,
-                                                text = inputText.text,
-                                                isUser = true
-                                            )
-                                            messages = messages + newMessage
-                                            inputText = TextFieldValue("")
-                                            isSending = true
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                try {
+                                                    val userId = Prefs.getUserIdToken(context) ?: ""
 
-                                            coroutineScope.launch {
-                                                kotlinx.coroutines.delay(500)
-                                                messages = messages + ChatMessage(
-                                                    id = messages.size + 2,
-                                                    text = "Reply to: ${newMessage.text}",
-                                                    isUser = false
-                                                )
-                                                isSending = false
+                                                    messages = messages + ChatMessage(
+                                                        id = messages.size + 1,
+                                                        text = inputText.text,
+                                                        isUser = true
+                                                    )
+
+                                                    isSending = true
+
+                                                    val response = RetrofitClient.apiService.sendMessage(
+                                                        ChatRequest(
+                                                            idToken = userId,
+                                                            chat_id = Prefs.getChatId(context) ?: "",
+                                                            prompt = inputText.text,
+                                                            system_message = "You are a Mumbai Tapori assistant. Reply in Mumbai slang hinglish language fully.",
+                                                            max_context_messages = 50
+                                                        )
+                                                    )
+                                                    if(response.isSuccessful){
+                                                        messages = messages + ChatMessage(
+                                                            id = messages.size + 1,
+                                                            text = response.body()?.reply ?: "No response",
+                                                            isUser = false
+                                                        )
+                                                        isSending = false
+                                                    }else{
+                                                        if (response.code() == 402){
+                                                            val responseText = if (response.code() == 402) {
+                                                                val json =
+                                                                    JSONObject(response.errorBody()?.string() ?: "{}")
+                                                                val reply =
+                                                                    json.optString("reply", "Credit khatam ho gaya re!")
+                                                                reply
+                                                            } else {
+                                                                "Error: ${response.code()}"
+                                                            }
+                                                            messages = messages + ChatMessage(
+                                                                id = messages.size + 1,
+                                                                text = responseText,
+                                                                isUser = false
+                                                            )
+                                                        }
+                                                        isSending = false
+                                                    }
+                                                } catch (e: Exception) {
+                                                    chatError = e.message
+                                                } finally {
+                                                    isLoading = false
+                                                    inputText = TextFieldValue("")
+                                                }
                                             }
                                         }
                                     }
