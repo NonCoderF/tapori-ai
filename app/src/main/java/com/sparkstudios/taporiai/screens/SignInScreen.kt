@@ -1,4 +1,4 @@
-package com.sparkstudios.taporiai
+package com.sparkstudios.taporiai.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +20,9 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.sparkstudios.taporiai.Screen
+import com.sparkstudios.taporiai.utils.CLIENT_ID
+import com.sparkstudios.taporiai.utils.Prefs
 
 @Composable
 fun SignInScreen(navController: NavController) {

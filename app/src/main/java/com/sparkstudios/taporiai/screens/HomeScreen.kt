@@ -1,4 +1,4 @@
-package com.sparkstudios.taporiai
+package com.sparkstudios.taporiai.screens
 
 import android.util.Log
 import android.widget.Toast
@@ -25,9 +25,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.sparkstudios.taporiai.Screen
+//import com.razorpay.Checkout
 import com.sparkstudios.taporiai.network.ChatRequest
 import com.sparkstudios.taporiai.network.CreditRequest
 import com.sparkstudios.taporiai.network.RetrofitClient
+import com.sparkstudios.taporiai.utils.Prefs
+import com.sparkstudios.taporiai.utils.logout
+import com.sparkstudios.taporiai.utils.refreshToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -148,49 +153,87 @@ fun HomeScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        Button(onClick = {
-            isLoading = true
-            CoroutineScope(Dispatchers.IO).launch {
-                refreshToken(
-                    context = context,
-                    onRefreshed = {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                val response = RetrofitClient.apiService.addCredit(
-                                    CreditRequest(
-                                        idToken = Prefs.getUserIdToken(context) ?: "",
-                                        creditsToAdd = 10
-                                    )
-                                )
 
-                                if (response.isSuccessful) {
-                                    CoroutineScope(Dispatchers.Main).launch {
-                                        Toast.makeText(
-                                            context,
-                                            response.body()?.message,
-                                            LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
+//        Button(onClick = {
+//            isLoading = true
+//            CoroutineScope(Dispatchers.IO).launch {
+//                refreshToken(
+//                    context = context,
+//                    onRefreshed = {
+//                        CoroutineScope(Dispatchers.IO).launch {
+//                            try {
+//                                val response = RetrofitClient.apiService.addCredit(
+//                                    CreditRequest(
+//                                        idToken = Prefs.getUserIdToken(context) ?: "",
+//                                        creditsToAdd = 10
+//                                    )
+//                                )
+//
+//                                if (response.isSuccessful) {
+//                                    CoroutineScope(Dispatchers.Main).launch {
+//                                        Toast.makeText(
+//                                            context,
+//                                            response.body()?.message,
+//                                            LENGTH_SHORT
+//                                        ).show()
+//                                    }
+//                                }
+//
+//
+//                            } catch (e: Exception) {
+//                                Log.e("Exception", e.toString())
+//                            } finally {
+//                                isLoading = false
+//                            }
+//                        }
+//                    },
+//                    onFailure = {
+//                        logout(context)
+//                        navController.navigate(Screen.SignIn.route) {
+//                            popUpTo(Screen.Home.route) { inclusive = true }
+//                        }
+//                    }
+//                ).invoke()
+//            }
+//        }) {
+//            Text("Add Credits", fontSize = 18.sp)
+//        }
+
+//        PayWithMyUpis()
+
+//        Button(
+//            onClick = {
+//                CoroutineScope(Dispatchers.IO).launch {
+//                    startPayment(context as Activity)
+//                }
+//            }
+//        ){
+//            Text("Pay")
+//        }
 
 
-                            } catch (e: Exception) {
-                                Log.e("Exception", e.toString())
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    },
-                    onFailure = {
-                        logout(context)
-                        navController.navigate(Screen.SignIn.route) {
-                            popUpTo(Screen.Home.route) { inclusive = true }
-                        }
-                    }
-                ).invoke()
-            }
-        }) {
-            Text("Add Credits", fontSize = 18.sp)
-        }
     }
 }
+
+//private fun startPayment(activity : Activity) {
+//    val checkout = Checkout()
+//    checkout.setKeyID("rzp_test_REJGwPsIkwJZRs")
+//
+//    try {
+//        val options = JSONObject()
+//        options.put("name", "Spark Studios")
+//        options.put("description", "Test Payment")
+//        options.put("currency", "INR")
+//        options.put("amount", "100") // amount in paise (100 = ₹1)
+//
+//        val prefill = JSONObject()
+//        prefill.put("email", "sallyinfo365@gmail.com")
+//        prefill.put("contact", "+917002601418")
+//        options.put("prefill", prefill)
+//
+//        checkout.open(activity, options)
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+//        Toast.makeText(activity, "Error in payment: ${e.message}", Toast.LENGTH_LONG).show()
+//    }
+//}

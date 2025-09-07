@@ -1,8 +1,9 @@
-package com.sparkstudios.taporiai
+package com.sparkstudios.taporiai.utils
 
 import android.content.Context
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.sparkstudios.taporiai.utils.Prefs
 
 const val CLIENT_ID = "982063479058-h3d3h9s9nsreb241e74okdpgsrmdk36l.apps.googleusercontent.com"
 

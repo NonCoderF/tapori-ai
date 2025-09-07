@@ -1,4 +1,4 @@
-package com.sparkstudios.taporiai
+package com.sparkstudios.taporiai.utils
 
 import android.content.Context
 import androidx.core.content.edit

@@ -56,6 +56,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation ("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation ("com.squareup.retrofit2:converter-scalars:2.1.0")
+    implementation ("com.razorpay:checkout:1.6.33")
 
     testImplementation(libs.junit)
 }
