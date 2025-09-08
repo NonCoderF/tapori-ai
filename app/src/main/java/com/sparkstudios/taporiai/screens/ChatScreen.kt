@@ -10,9 +10,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -262,13 +268,15 @@ fun ChatScreen(
                                     isSending = isSending,
                                     onSendClick = {
                                         if (inputText.text.isNotBlank() && !isSending) {
+                                            val prompt = inputText.text
+                                            inputText = TextFieldValue("")
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 try {
                                                     val userId = Prefs.getUserIdToken(context) ?: ""
 
                                                     messages = messages + ChatMessage(
                                                         id = messages.size + 1,
-                                                        text = inputText.text,
+                                                        text = prompt,
                                                         isUser = true
                                                     )
 
@@ -278,7 +286,7 @@ fun ChatScreen(
                                                         ChatRequest(
                                                             idToken = userId,
                                                             chat_id = Prefs.getChatId(context) ?: "",
-                                                            prompt = inputText.text,
+                                                            prompt = prompt,
                                                             system_message = "You are a Mumbai Tapori assistant. Reply in Mumbai slang hinglish language fully.",
                                                             max_context_messages = 50
                                                         )
@@ -314,7 +322,6 @@ fun ChatScreen(
                                                     chatError = e.message
                                                 } finally {
                                                     isLoading = false
-                                                    inputText = TextFieldValue("")
                                                 }
                                             }
                                         }
@@ -407,7 +414,8 @@ fun ChatInputBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(4.dp),
+            .padding(4.dp)
+            .padding(WindowInsets.ime.exclude(WindowInsets.navigationBars).asPaddingValues()),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextField(
