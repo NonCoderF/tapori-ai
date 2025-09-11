@@ -24,7 +24,7 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
 }
 
-class MainActivity : ComponentActivity(), PaymentResultListener {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -32,14 +32,6 @@ class MainActivity : ComponentActivity(), PaymentResultListener {
                 AppNavigation()
             }
         }
-    }
-
-    override fun onPaymentSuccess(p0: String?) {
-        Log.e("TAG", "Paymnet success : " + p0.toString())
-    }
-
-    override fun onPaymentError(p0: Int, p1: String?) {
-        Log.e("TAG", "Paymnet fail : " + p1.toString())
     }
 
     @Composable

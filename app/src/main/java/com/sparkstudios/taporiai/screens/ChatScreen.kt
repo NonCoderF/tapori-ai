@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.gson.Gson
 import com.razorpay.Checkout
-import com.sparkstudios.tapori.ai.R
+import com.sparkstudios.tapori.ai.chatbot.R
 import com.sparkstudios.taporiai.Screen
 import com.sparkstudios.taporiai.network.ChatDownloadRequest
 import com.sparkstudios.taporiai.network.ChatRequest
@@ -143,9 +143,9 @@ fun ChatScreen(
 
     fun loadChats() {
         isLoading = true
-        refreshToken(
-            context = context,
-            onRefreshed = {
+//        refreshToken(
+//            context = context,
+//            onRefreshed = {
                 coroutineScope.launch {
                     try {
                         val response = RetrofitClient.apiService.downloadChat(
@@ -191,14 +191,14 @@ fun ChatScreen(
                         isLoading = false
                     }
                 }
-            },
-            onFailure = {
-                logout(context)
-                navController.navigate(Screen.SignIn.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
-                }
-            }
-        ).invoke()
+//            },
+//            onFailure = {
+//                logout(context)
+//                navController.navigate(Screen.SignIn.route) {
+//                    popUpTo(Screen.Home.route) { inclusive = true }
+//                }
+//            }
+//        ).invoke()
     }
 
     LaunchedEffect(userIdToken) {

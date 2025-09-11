@@ -5,16 +5,16 @@ plugins {
 }
 
 android {
-    namespace = "com.sparkstudios.tapori.ai"
+    namespace = "com.sparkstudios.tapori.ai.chatbot"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.sparkstudios.tapori.ai"
+        applicationId = "com.sparkstudios.tapori.ai.chatbot"
         minSdk = 24
         //noinspection OldTargetApi
         targetSdk = 35
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 8
+        versionName = "8.0"
     }
 
     buildFeatures {

@@ -34,7 +34,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.sparkstudios.tapori.ai.R
+import com.sparkstudios.tapori.ai.chatbot.R
 import com.sparkstudios.taporiai.Screen
 import com.sparkstudios.taporiai.utils.CLIENT_ID
 import com.sparkstudios.taporiai.utils.Prefs
@@ -120,6 +120,34 @@ fun SignInScreen(navController: NavController) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Google se sign in kar re",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Button(
+                onClick = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.SignIn.route) { inclusive = true }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Yellow,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .padding(horizontal = 32.dp)
+                    .height(56.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_synagogue_24),
+                    contentDescription = "Google",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Guest hai tu, chal proceed kar re!",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold
                 )
