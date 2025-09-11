@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -442,7 +443,9 @@ fun ChatInputBar(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .weight(1f)
-                .height(50.dp)
+                .wrapContentHeight(), // expands naturally with text
+            minLines = 1,
+            maxLines = Int.MAX_VALUE, // no restriction
         )
 
         Spacer(modifier = Modifier.width(8.dp))

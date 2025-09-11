@@ -125,33 +125,33 @@ fun SignInScreen(navController: NavController) {
                 )
             }
 
-            Button(
-                onClick = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.SignIn.route) { inclusive = true }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Yellow,
-                    contentColor = Color.Black
-                ),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier
-                    .padding(horizontal = 32.dp)
-                    .height(56.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.outline_synagogue_24),
-                    contentDescription = "Google",
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Guest hai tu, chal proceed kar re!",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+//            Button(
+//                onClick = {
+//                    navController.navigate(Screen.Home.route) {
+//                        popUpTo(Screen.SignIn.route) { inclusive = true }
+//                    }
+//                },
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = Color.Yellow,
+//                    contentColor = Color.Black
+//                ),
+//                shape = RoundedCornerShape(50),
+//                modifier = Modifier
+//                    .padding(horizontal = 32.dp)
+//                    .height(56.dp)
+//            ) {
+//                Image(
+//                    painter = painterResource(id = R.drawable.outline_synagogue_24),
+//                    contentDescription = "Google",
+//                    modifier = Modifier.size(24.dp)
+//                )
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Text(
+//                    text = "Guest hai tu, chal proceed kar re!",
+//                    fontSize = 18.sp,
+//                    fontWeight = FontWeight.SemiBold
+//                )
+//            }
         }
     }
 }
