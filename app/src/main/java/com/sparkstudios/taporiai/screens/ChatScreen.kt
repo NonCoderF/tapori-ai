@@ -141,11 +141,20 @@ fun ChatScreen(
         showCloseAlertDialog = true
     }
 
+    LaunchedEffect(chatError) {
+        if (chatError != null){
+            isSending = false
+            Toast.makeText(context, chatError, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     fun loadChats() {
+        chatError = null
         isLoading = true
-//        refreshToken(
-//            context = context,
-//            onRefreshed = {
+        refreshToken(
+            context = context,
+            onRefreshed = {
                 coroutineScope.launch {
                     try {
                         val response = RetrofitClient.apiService.downloadChat(
@@ -191,14 +200,14 @@ fun ChatScreen(
                         isLoading = false
                     }
                 }
-//            },
-//            onFailure = {
-//                logout(context)
-//                navController.navigate(Screen.SignIn.route) {
-//                    popUpTo(Screen.Home.route) { inclusive = true }
-//                }
-//            }
-//        ).invoke()
+            },
+            onFailure = {
+                logout(context)
+                navController.navigate(Screen.SignIn.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
+                }
+            }
+        ).invoke()
     }
 
     LaunchedEffect(userIdToken) {
@@ -319,9 +328,10 @@ fun ChatScreen(
                                                         isSending = false
                                                     }
                                                 } catch (e: Exception) {
-                                                    chatError = e.message
+                                                    chatError = "Oops, chat pakad nahi paaye… dobara try kar re!"
                                                 } finally {
                                                     isLoading = false
+                                                    isSending = false
                                                 }
                                             }
                                         }
