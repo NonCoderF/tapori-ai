@@ -30,24 +30,29 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # 5. Rename APK with commit hash + timestamp
+      # 5. Rename APK with commit hash + timestamp inside correct folder
       - name: Rename APK
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          APK_PATH=app/build/outputs/apk/release/app-release.apk
-          NEW_APK_NAME=app/build/outputs/apk/release/app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv $APK_PATH $NEW_APK_NAME
-          echo "APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk" >> $GITHUB_ENV
+          APK_DIR=app/build/outputs/apk/release
+          APK_PATH=$APK_DIR/app-release.apk
+          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
+          mv $APK_PATH $APK_DIR/$NEW_APK_NAME
+          echo "APK_NAME=$NEW_APK_NAME" >> $GITHUB_ENV
 
-      # 6. Upload APK as artifact
+      # 6. List APK folder for debug
+      - name: List APK folder
+        run: ls -l app/build/outputs/apk/release/
+
+      # 7. Upload APK as artifact with correct path
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: ${{ env.APK_NAME }}
+          path: app/build/outputs/apk/release/${{ env.APK_NAME }}
 
-      # 7. Send email to testers with artifact page link
+      # 8. Send email to testers with artifact page link
       - name: Send Email to Testers
         uses: dawidd6/action-send-mail@v3
         with:
