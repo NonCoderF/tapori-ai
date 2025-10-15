@@ -59,38 +59,6 @@
       },
       "oauth_client": [
         {
-          "client_id": "251119098046-330rfbut5i5fvl14lm76vfh7tkht42je.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.sparkstudios.tapori.ai.chatbot",
-            "certificate_hash": "487a92923e9d804a02aa71c7d156deda40443dda"
-          }
-        },
-        {
-          "client_id": "251119098046-4j5nkv66il1v0e30sbc12cutrn8d294m.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.sparkstudios.tapori.ai.chatbot",
-            "certificate_hash": "128fcf1a905f702dae713eae52fcb2e866d50354"
-          }
-        },
-        {
-          "client_id": "251119098046-m53e1ouhf0nk451u0h73rh0boojh2jj9.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.sparkstudios.tapori.ai.chatbot",
-            "certificate_hash": "875258adc7ca2b8672cf29f9eb5c4afeb9808185"
-          }
-        },
-        {
-          "client_id": "251119098046-nons691ac40s0ssotv4m7t1idfndl78m.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.sparkstudios.tapori.ai.chatbot",
-            "certificate_hash": "41a77fea760385b34c37b4dce50bb293afb2e170"
-          }
-        },
-        {
           "client_id": "251119098046-ih3bq53nisp3fo39p6gmrfbth4mt2msb.apps.googleusercontent.com",
           "client_type": 3
         }

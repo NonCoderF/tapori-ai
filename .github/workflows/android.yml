@@ -85,7 +85,7 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
           to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "New Release APK - Commit ${{ github.sha }}"
+          subject: "A new release APK has been uploaded"
           body: |
             Hi team,
 
