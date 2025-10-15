@@ -1,4 +1,4 @@
-name: Android CI → Upload to Google Drive
+name: Android CI → Upload to Google Drive + Email
 
 on:
   push:
@@ -38,5 +38,28 @@ jobs:
         uses: Jodebu/upload-to-drive@v1
         with:
           credentials: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
-          parent_folder_id: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
-          file: ${{ env.APK_PATH }}
+          folder: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
+          target: ${{ env.APK_PATH }}
+          name: ${{ env.APK_PATH }}
+
+      - name: Send email to testers
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+          subject: "New Release APK - Commit ${{ github.sha }}"
+          body: |
+            Hi team,
+
+            The latest release APK has been uploaded to Google Drive.
+
+            Drive Link: https://drive.google.com/drive/folders/1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
+
+            Commit: ${{ github.sha }}
+            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
+
+          secure: true
