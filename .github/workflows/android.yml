@@ -49,7 +49,7 @@ jobs:
         with:
           dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           src: ${{ env.APK_PATH }}
-          dest: tapori-ai-builds/${{ env.APK_NAME }}
+          dest: /tapori-ai-builds/${{ env.APK_NAME }}
           mode: overwrite
           autorename: true
           multiple: false
