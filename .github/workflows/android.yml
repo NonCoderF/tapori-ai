@@ -44,7 +44,7 @@ jobs:
       # 6️⃣ Upload APK to Google Drive
       - name: Upload APK to Google Drive
         id: upload
-        uses: r0adkll/upload-google-drive-action@v1
+        uses: adityak74/google-drive-upload-git-action@v0.3
         with:
           service_account_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
           parent_folder_id: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
