@@ -41,15 +41,15 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to file.io
-      - name: Upload APK to file.io
+      # 6️⃣ Upload APK to AnonFiles
+      - name: Upload APK to anonfiles
         id: upload
         run: |
           FILE_PATH=$APK_PATH
           FILE_NAME=$APK_NAME
-          echo "Uploading $FILE_NAME to file.io..."
-          RESPONSE=$(curl -F "file=@$FILE_PATH" https://file.io)
-          URL=$(echo $RESPONSE | jq -r '.link')
+          echo "Uploading $FILE_NAME to anonfiles.com..."
+          RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
+          URL=$(echo $RESPONSE | jq -r '.data.file.url.full')
           if [ -z "$URL" ] || [ "$URL" = "null" ]; then
             echo "ERROR: Upload failed, URL is empty"
             exit 1
@@ -59,7 +59,8 @@ jobs:
 
       # 7️⃣ Set timestamp for email
       - name: Set timestamp
-        run: echo "EMAIL_TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+        id: timestamp
+        run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
 
       # 8️⃣ Send email to testers
       - name: Send email to testers
@@ -80,5 +81,5 @@ jobs:
             Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
-            Timestamp: ${{ env.EMAIL_TIMESTAMP }}
+            Timestamp: ${{ steps.timestamp.outputs.time }}
           secure: true
