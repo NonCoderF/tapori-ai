@@ -41,34 +41,38 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to transfer.sh
-      - name: Upload APK to transfer.sh
+      # 6️⃣ Install jq for JSON parsing
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # 7️⃣ Upload APK to file.io
+      - name: Upload APK to file.io
         run: |
           FILE_PATH=${{ env.APK_PATH }}
           FILE_NAME=${{ env.APK_NAME }}
-          echo "Uploading $FILE_NAME to transfer.sh..."
-          URL=$(curl --upload-file "$FILE_PATH" "https://transfer.sh/$FILE_NAME")
+          echo "Uploading $FILE_NAME to file.io..."
+          URL=$(curl -s -F "file=@$FILE_PATH" https://file.io | jq -r .link)
           echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
           echo "APK uploaded: $URL"
 
-      # 7️⃣ Send email to testers
-      - name: Send email to testers
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          from: ${{ secrets.EMAIL_USERNAME }}
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "New Release APK - Commit ${{ github.sha }}"
-          body: |
-            Hi team,
-
-            The latest release APK has been uploaded.
-
-            Direct Download Link: ${{ env.DIRECT_LINK }}
-
-            Commit: ${{ github.sha }}
-            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
-          secure: true
+      # 8️⃣ Send email to testers
+#      - name: Send email to testers
+#        uses: dawidd6/action-send-mail@v3
+#        with:
+#          server_address: smtp.gmail.com
+#          server_port: 465
+#          username: ${{ secrets.EMAIL_USERNAME }}
+#          password: ${{ secrets.EMAIL_PASSWORD }}
+#          from: ${{ secrets.EMAIL_USERNAME }}
+#          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+#          subject: "New Release APK - Commit ${{ github.sha }}"
+#          body: |
+#            Hi team,
+#
+#            The latest release APK has been uploaded.
+#
+#            Direct Download Link: ${{ env.DIRECT_LINK }}
+#
+#            Commit: ${{ github.sha }}
+#            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
+#          secure: true
