@@ -1,4 +1,4 @@
-name: Android CI → Build APK + Upload to Dropbox + Email
+name: Android CI → Build APK + Upload + Email
 
 on:
   push:
@@ -36,39 +36,22 @@ jobs:
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          RUN_NUM=${{ github.run_number }}
-          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}-${RUN_NUM}.apk
+          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
           mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to Dropbox
-      - name: Upload to Dropbox
-        id: dropbox_upload
-        uses: deka0106/upload-to-dropbox@v2
-        with:
-          dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
-          src: ${{ env.APK_PATH }}
-          dest: /tapori-ai-builds/${{ env.APK_NAME }}
-          mode: overwrite
-          autorename: true
-          multiple: false
-          mute: false
-
-      # 7️⃣ Generate Dropbox shared link
-      - name: Generate Dropbox shared link
-        id: dropbox_link
+      # 6️⃣ Upload APK to transfer.sh
+      - name: Upload APK to transfer.sh
         run: |
-          TOKEN=${{ secrets.DROPBOX_ACCESS_TOKEN }}
-          FILE_PATH="tapori-ai-builds/${APK_NAME}"
-          LINK=$(curl -s -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
-            --header "Authorization: Bearer $TOKEN" \
-            --header "Content-Type: application/json" \
-            --data "{\"path\": \"/$FILE_PATH\", \"settings\": {\"requested_visibility\": \"public\"}}" | jq -r '.url')
-          LINK=${LINK//dl=0/dl=1} # force direct download link
-          echo "DROPBOX_LINK=$LINK" >> $GITHUB_ENV
+          FILE_PATH=${{ env.APK_PATH }}
+          FILE_NAME=${{ env.APK_NAME }}
+          echo "Uploading $FILE_NAME to transfer.sh..."
+          URL=$(curl --upload-file "$FILE_PATH" "https://transfer.sh/$FILE_NAME")
+          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+          echo "APK uploaded: $URL"
 
-      # 8️⃣ Send email to testers
+      # 7️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -84,9 +67,8 @@ jobs:
 
             The latest release APK has been uploaded.
 
-            Direct Download Link: ${{ env.DROPBOX_LINK }}
+            Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
             Timestamp: $(date +%Y-%m-%d %H:%M:%S)
           secure: true
-
