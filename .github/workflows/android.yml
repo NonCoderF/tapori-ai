@@ -41,32 +41,42 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to anonfiles.com with retries
+      # 6️⃣ Upload APK to AnonFiles (robust)
       - name: Upload APK to anonfiles.com
         id: upload
         run: |
           FILE_PATH=$APK_PATH
           FILE_NAME=$APK_NAME
           echo "Uploading $FILE_NAME to anonfiles.com..."
-          
-          # Retry logic (3 attempts)
-          for i in 1 2 3; do
-            RESPONSE=$(curl --retry 3 --retry-delay 5 -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
-            URL=$(echo $RESPONSE | jq -r '.data.file.url.full')
-            if [[ -n "$URL" && "$URL" != "null" ]]; then
-              echo "Upload succeeded: $URL"
-              break
+
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            RESPONSE=$(curl -s -w "%{http_code}" -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
+            HTTP_CODE=${RESPONSE: -3}     # Last 3 chars are HTTP code
+            BODY=${RESPONSE:: -3}         # Rest is body
+
+            if [[ "$HTTP_CODE" -eq 200 ]]; then
+              URL=$(echo $BODY | jq -r '.data.file.url.full')
+              if [[ -n "$URL" && "$URL" != "null" ]]; then
+                echo "Upload succeeded: $URL"
+                echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+                break
+              fi
             fi
-            echo "Upload attempt $i failed, retrying..."
-            sleep 5
+
+            echo "Upload attempt $i failed (HTTP $HTTP_CODE), retrying..."
+            sleep $((i*5))
           done
 
           if [[ -z "$URL" || "$URL" == "null" ]]; then
-            echo "ERROR: Upload failed after 3 attempts"
+            echo "ERROR: Upload failed after $MAX_RETRIES attempts"
             exit 1
           fi
-
-          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.16-8/x64
+          JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.16-8/x64
+          APK_PATH: ${{ env.APK_PATH }}
+          APK_NAME: ${{ env.APK_NAME }}
 
       # 7️⃣ Set timestamp for email
       - name: Set timestamp
