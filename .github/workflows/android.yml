@@ -43,20 +43,13 @@ jobs:
 
       # 6️⃣ Upload APK to DropBox
       - name: Upload to Dropbox
-        uses: dropbox/dropbox-api-action@v1
+        uses: deka0106/upload-to-dropbox@v2
         with:
           token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           command: upload
           local_path: app/build/outputs/apk/release/app-release.apk
           remote_path: /tapori-ai-builds/app-release-${{ github.run_number }}.apk
 
-
-      # 7️⃣ Generate direct download link
-      - name: Generate direct download link
-        run: |
-          FILE_ID="${{ steps.upload.outputs.fileId }}"
-          DIRECT_LINK="https://drive.google.com/uc?export=download&id=${FILE_ID}"
-          echo "DIRECT_LINK=${DIRECT_LINK}" >> $GITHUB_ENV
 
       # 8️⃣ Send email to testers
       - name: Send email to testers
