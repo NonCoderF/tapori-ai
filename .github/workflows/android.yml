@@ -78,12 +78,7 @@ jobs:
           APK_PATH: ${{ env.APK_PATH }}
           APK_NAME: ${{ env.APK_NAME }}
 
-      # 7️⃣ Set timestamp for email
-      - name: Set timestamp
-        id: timestamp
-        run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
-
-      # 8️⃣ Send email to testers
+      # 7️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -102,5 +97,5 @@ jobs:
             Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
-            Timestamp: ${{ steps.timestamp.outputs.time }}
+            Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
           secure: true
