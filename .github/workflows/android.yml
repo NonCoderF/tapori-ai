@@ -46,7 +46,7 @@ jobs:
         id: upload
         uses: adityak74/google-drive-upload-git-action@v0.3
         with:
-          credentials_base64: ${{ secrets.GDRIVE_CREDENTIALS_BASE64 }}
+          credentials: ${{ secrets.GDRIVE_CREDENTIALS_BASE64 }}
           folderId: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
           filename: ${{ env.APK_PATH }}
           name: ${{ env.APK_NAME }}
