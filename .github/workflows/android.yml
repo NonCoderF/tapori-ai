@@ -41,41 +41,31 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to anonfiles.com
-      - name: Upload APK to anonfiles.com
+      # 6️⃣ Upload APK to file.io
+      - name: Upload APK to file.io
         id: upload
         run: |
           FILE_PATH=$APK_PATH
           FILE_NAME=$APK_NAME
-          echo "Uploading $FILE_NAME to anonfiles.com..."
-
+          echo "Uploading $FILE_NAME to file.io..."
+          
           MAX_RETRIES=5
-          SUCCESS=0
-
           for i in $(seq 1 $MAX_RETRIES); do
-            RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
-            STATUS=$(echo "$RESPONSE" | jq -r '.status')
-            URL=$(echo "$RESPONSE" | jq -r '.data.file.url.full // empty')
-
-            if [[ "$STATUS" == "true" && -n "$URL" ]]; then
+            RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://file.io)
+            URL=$(echo $RESPONSE | jq -r '.link')
+            if [[ -n "$URL" && "$URL" != "null" ]]; then
               echo "Upload succeeded: $URL"
               echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
-              SUCCESS=1
               break
             fi
-
             echo "Upload attempt $i failed, retrying..."
             sleep $((i*5))
           done
 
-          if [[ $SUCCESS -ne 1 ]]; then
+          if [[ -z "$URL" || "$URL" == "null" ]]; then
             echo "ERROR: Upload failed after $MAX_RETRIES attempts"
             exit 1
           fi
-        shell: /usr/bin/bash -e {0}
-        env:
-          APK_PATH: ${{ env.APK_PATH }}
-          APK_NAME: ${{ env.APK_NAME }}
 
       # 7️⃣ Set timestamp for email
       - name: Set timestamp
