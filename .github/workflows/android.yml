@@ -37,32 +37,25 @@ jobs:
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          LATEST_APK=$(ls -t app/build/outputs/apk/release/*.apk | head -n 1)
-          mv $LATEST_APK app/build/outputs/apk/release/${NEW_APK_NAME}
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to Dropbox
+      # 6️⃣ Verify APK exists
+      - name: Verify APK
+        run: ls -l ${{ env.APK_PATH }}
+
+      # 7️⃣ Upload APK to Dropbox
       - name: Upload to Dropbox
         uses: deka0106/upload-to-dropbox@v2
         with:
           dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           src: ${{ env.APK_PATH }}
-          dest: /tapori-ai-builds/${{ github.run_number }}-${{ env.APK_NAME }}
+          dest: /tapori-ai-builds/${{ env.APK_NAME }}
+          mode: overwrite
           autorename: true
-
-      # 7️⃣ Generate public Dropbox link
-      - name: Generate public Dropbox link
-        id: dropbox_link
-        run: |
-          APK_REMOTE_PATH="/tapori-ai-builds/${GITHUB_RUN_NUMBER}-${APK_NAME}"
-          RESPONSE=$(curl -s -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
-            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
-            --header "Content-Type: application/json" \
-            --data "{\"path\": \"${APK_REMOTE_PATH}\", \"settings\": {\"requested_visibility\": \"public\"}}")
-          URL=$(echo $RESPONSE | jq -r '.url' | sed 's?dl=0?dl=1?')
-          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
-          echo "Dropbox link generated: $URL"
+          multiple: false
+          mute: false
 
       # 8️⃣ Send email to testers
       - name: Send email to testers
@@ -78,9 +71,9 @@ jobs:
           body: |
             Hi team,
 
-            The latest release APK has been uploaded.
+            The latest release APK has been uploaded to Dropbox.
 
-            Direct Download Link: ${{ env.DIRECT_LINK }}
+            Direct Download Link: https://www.dropbox.com/home/tapori-ai-builds/${{ env.APK_NAME }}
 
             Commit: ${{ github.sha }}
             Timestamp: $(date +%Y-%m-%d %H:%M:%S)
