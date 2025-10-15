@@ -41,7 +41,7 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to AnonFiles (robust)
+      # 6️⃣ Upload APK to anonfiles.com
       - name: Upload APK to anonfiles.com
         id: upload
         run: |
@@ -50,35 +50,39 @@ jobs:
           echo "Uploading $FILE_NAME to anonfiles.com..."
 
           MAX_RETRIES=5
-          for i in $(seq 1 $MAX_RETRIES); do
-            RESPONSE=$(curl -s -w "%{http_code}" -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
-            HTTP_CODE=${RESPONSE: -3}     # Last 3 chars are HTTP code
-            BODY=${RESPONSE:: -3}         # Rest is body
+          SUCCESS=0
 
-            if [[ "$HTTP_CODE" -eq 200 ]]; then
-              URL=$(echo $BODY | jq -r '.data.file.url.full')
-              if [[ -n "$URL" && "$URL" != "null" ]]; then
-                echo "Upload succeeded: $URL"
-                echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
-                break
-              fi
+          for i in $(seq 1 $MAX_RETRIES); do
+            RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            URL=$(echo "$RESPONSE" | jq -r '.data.file.url.full // empty')
+
+            if [[ "$STATUS" == "true" && -n "$URL" ]]; then
+              echo "Upload succeeded: $URL"
+              echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+              SUCCESS=1
+              break
             fi
 
-            echo "Upload attempt $i failed (HTTP $HTTP_CODE), retrying..."
+            echo "Upload attempt $i failed, retrying..."
             sleep $((i*5))
           done
 
-          if [[ -z "$URL" || "$URL" == "null" ]]; then
+          if [[ $SUCCESS -ne 1 ]]; then
             echo "ERROR: Upload failed after $MAX_RETRIES attempts"
             exit 1
           fi
+        shell: /usr/bin/bash -e {0}
         env:
-          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.16-8/x64
-          JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.16-8/x64
           APK_PATH: ${{ env.APK_PATH }}
           APK_NAME: ${{ env.APK_NAME }}
 
-      # 7️⃣ Send email to testers
+      # 7️⃣ Set timestamp for email
+      - name: Set timestamp
+        id: timestamp
+        run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
+
+      # 8️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -97,5 +101,5 @@ jobs:
             Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
-            Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
+            Timestamp: ${{ steps.timestamp.outputs.time }}
           secure: true
