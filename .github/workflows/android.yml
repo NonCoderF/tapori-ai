@@ -56,23 +56,23 @@ jobs:
           echo "APK uploaded: $URL"
 
       # 8️⃣ Send email to testers
-#      - name: Send email to testers
-#        uses: dawidd6/action-send-mail@v3
-#        with:
-#          server_address: smtp.gmail.com
-#          server_port: 465
-#          username: ${{ secrets.EMAIL_USERNAME }}
-#          password: ${{ secrets.EMAIL_PASSWORD }}
-#          from: ${{ secrets.EMAIL_USERNAME }}
-#          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-#          subject: "New Release APK - Commit ${{ github.sha }}"
-#          body: |
-#            Hi team,
-#
-#            The latest release APK has been uploaded.
-#
-#            Direct Download Link: ${{ env.DIRECT_LINK }}
-#
-#            Commit: ${{ github.sha }}
-#            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
-#          secure: true
+      - name: Send email to testers
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+          subject: "New Release APK - Commit ${{ github.sha }}"
+          body: |
+            Hi team,
+
+            The latest release APK has been uploaded.
+
+            Direct Download Link: ${{ env.DIRECT_LINK }}
+
+            Commit: ${{ github.sha }}
+            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
+          secure: true
