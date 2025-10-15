@@ -41,16 +41,13 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to Google Drive
-      - name: Upload APK to Google Drive
-        id: upload
-        uses: adityak74/google-drive-upload-git-action@v0.3
+      # 6️⃣ Upload APK to DropBox
+      - name: Upload to Dropbox
+        uses: skitionek/dropbox-upload-action@v2.3.2
         with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS_BASE64 }}
-          folderId: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
-          filename: ${{ env.APK_PATH }}
-          name: ${{ env.APK_NAME }}
-          overwrite: true
+          dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          local_path: app/build/outputs/apk/release/app-release.apk
+          dropbox_path: /tapori-ai-builds/app-release-${{ github.run_number }}.apk
 
       # 7️⃣ Generate direct download link
       - name: Generate direct download link
