@@ -46,14 +46,16 @@ jobs:
         id: upload
         uses: adityak74/google-drive-upload-git-action@v0.3
         with:
-          service_account_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
-          parent_folder_id: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
-          source: ${{ env.APK_PATH }}
+          credentials: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+          folderId: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
+          filename: ${{ env.APK_PATH }}
+          name: ${{ env.APK_NAME }}
+          overwrite: true
 
       # 7️⃣ Generate direct download link
       - name: Generate direct download link
         run: |
-          FILE_ID="${{ steps.upload.outputs.file_id }}"
+          FILE_ID="${{ steps.upload.outputs.fileId }}"
           DIRECT_LINK="https://drive.google.com/uc?export=download&id=${FILE_ID}"
           echo "DIRECT_LINK=${DIRECT_LINK}" >> $GITHUB_ENV
 
