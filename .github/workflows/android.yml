@@ -41,8 +41,12 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to AnonFiles
-      - name: Upload APK to anonfiles
+      # 6️⃣ Install dependencies for upload
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      # 7️⃣ Upload APK to AnonFiles
+      - name: Upload APK to AnonFiles
         id: upload
         run: |
           FILE_PATH=$APK_PATH
@@ -57,12 +61,12 @@ jobs:
           echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
           echo "APK uploaded: $URL"
 
-      # 7️⃣ Set timestamp for email
+      # 8️⃣ Set timestamp for email
       - name: Set timestamp
         id: timestamp
         run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
 
-      # 8️⃣ Send email to testers
+      # 9️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
