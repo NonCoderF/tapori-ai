@@ -1,4 +1,4 @@
-name: Android CI → Build APK + Upload to Google Drive + Email
+name: Android CI → Build APK + Upload to Dropbox + Email
 
 on:
   push:
@@ -37,19 +37,32 @@ jobs:
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
+          LATEST_APK=$(ls -t app/build/outputs/apk/release/*.apk | head -n 1)
+          mv $LATEST_APK app/build/outputs/apk/release/${NEW_APK_NAME}
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to DropBox
+      # 6️⃣ Upload APK to Dropbox
       - name: Upload to Dropbox
         uses: deka0106/upload-to-dropbox@v2
         with:
-          token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
-          command: upload
-          local_path: app/build/outputs/apk/release/app-release.apk
-          remote_path: /tapori-ai-builds/app-release-${{ github.run_number }}.apk
+          dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          src: ${{ env.APK_PATH }}
+          dest: /tapori-ai-builds/${{ github.run_number }}-${{ env.APK_NAME }}
+          autorename: true
 
+      # 7️⃣ Generate public Dropbox link
+      - name: Generate public Dropbox link
+        id: dropbox_link
+        run: |
+          APK_REMOTE_PATH="/tapori-ai-builds/${GITHUB_RUN_NUMBER}-${APK_NAME}"
+          RESPONSE=$(curl -s -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
+            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data "{\"path\": \"${APK_REMOTE_PATH}\", \"settings\": {\"requested_visibility\": \"public\"}}")
+          URL=$(echo $RESPONSE | jq -r '.url' | sed 's?dl=0?dl=1?')
+          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+          echo "Dropbox link generated: $URL"
 
       # 8️⃣ Send email to testers
       - name: Send email to testers
@@ -72,5 +85,3 @@ jobs:
             Commit: ${{ github.sha }}
             Timestamp: $(date +%Y-%m-%d %H:%M:%S)
           secure: true
-
-
