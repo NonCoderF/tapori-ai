@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -44,16 +44,37 @@ jobs:
       # 6️⃣ Upload APK to Google Drive
       - name: Upload APK to Google Drive
         id: upload
-        uses: r0adkll/upload-google-drive@v1
+        uses: r0adkll/upload-google-drive-action@v1
         with:
           service_account_json: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
           parent_folder_id: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
           source: ${{ env.APK_PATH }}
-        continue-on-error: false
 
       # 7️⃣ Generate direct download link
       - name: Generate direct download link
         run: |
-          # r0adkll action outputs the file ID as upload_id
           FILE_ID="${{ steps.upload.outputs.file_id }}"
-          DIRECT_LINK="https://dri_
+          DIRECT_LINK="https://drive.google.com/uc?export=download&id=${FILE_ID}"
+          echo "DIRECT_LINK=${DIRECT_LINK}" >> $GITHUB_ENV
+
+      # 8️⃣ Send email to testers
+      - name: Send email to testers
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+          subject: "New Release APK - Commit ${{ github.sha }}"
+          body: |
+            Hi team,
+
+            The latest release APK has been uploaded.
+
+            Direct Download Link: ${{ env.DIRECT_LINK }}
+
+            Commit: ${{ github.sha }}
+            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
+          secure: true
