@@ -43,11 +43,13 @@ jobs:
 
       # 6️⃣ Upload APK to DropBox
       - name: Upload to Dropbox
-        uses: skitionek/dropbox-upload-action@v2.3.2
+        uses: dropbox/dropbox-api-action@v1
         with:
-          dropbox_access_token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          token: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          command: upload
           local_path: app/build/outputs/apk/release/app-release.apk
-          dropbox_path: /tapori-ai-builds/app-release-${{ github.run_number }}.apk
+          remote_path: /tapori-ai-builds/app-release-${{ github.run_number }}.apk
+
 
       # 7️⃣ Generate direct download link
       - name: Generate direct download link
