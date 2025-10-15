@@ -42,31 +42,13 @@ jobs:
 
       # 6. Upload APK as artifact
       - name: Upload APK as artifact
-        id: upload-artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: ${{ env.APK_NAME }}
 
-      # 7. Get direct download link
-      # Uses GITHUB_TOKEN automatically provided by GitHub
-      # This token is temporary, scoped to this repo & workflow, and expires after the run
-      - name: Get direct download link
-        id: get-artifact-url
-        uses: peter-evans/artifact-download-url@v2
-        with:
-          artifact_name: release-apk
-          repo: ${{ github.repository }}
-          run_id: ${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 8. Save the artifact URL to an environment variable
-      - name: Set download URL
-        run: echo "APK_URL=${{ steps.get-artifact-url.outputs.download_url }}" >> $GITHUB_ENV
-
-      # 9. Send email to testers with direct download link
-      - name: Send Email with Direct APK Link
+      # 7. Send email to testers with artifact page link
+      - name: Send Email to Testers
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -78,8 +60,8 @@ jobs:
           body: |
             Hi team,
 
-            The latest release APK is available for direct download:
-            ${{ env.APK_URL }}
+            The latest release APK is available for download as a GitHub artifact:
+            https://github.com/${{ github.repository }}/suites/${{ github.run_id }}/artifacts
 
             Commit: ${{ github.sha }}
             Timestamp: $(date +%Y-%m-%d %H:%M:%S)
