@@ -41,31 +41,34 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to file.io
-      - name: Upload APK to file.io
+      # 6️⃣ Upload APK to Catbox.moe
+      - name: Upload APK to Catbox
         id: upload
         run: |
           FILE_PATH=$APK_PATH
           FILE_NAME=$APK_NAME
-          echo "Uploading $FILE_NAME to file.io..."
+          echo "Uploading $FILE_NAME to Catbox..."
           
-          MAX_RETRIES=5
+          MAX_RETRIES=3
           for i in $(seq 1 $MAX_RETRIES); do
-            RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://file.io)
-            URL=$(echo $RESPONSE | jq -r '.link')
-            if [[ -n "$URL" && "$URL" != "null" ]]; then
-              echo "Upload succeeded: $URL"
-              echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+            RESPONSE=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@$FILE_PATH" https://catbox.moe/user/api.php)
+            if [[ -n "$RESPONSE" ]]; then
+              echo "Upload succeeded: $RESPONSE"
+              echo "DIRECT_LINK=$RESPONSE" >> $GITHUB_ENV
               break
             fi
             echo "Upload attempt $i failed, retrying..."
             sleep $((i*5))
           done
-
-          if [[ -z "$URL" || "$URL" == "null" ]]; then
+          
+          if [[ -z "$RESPONSE" ]]; then
             echo "ERROR: Upload failed after $MAX_RETRIES attempts"
             exit 1
           fi
+        shell: /usr/bin/bash -e {0}
+        env:
+          APK_PATH: ${{ env.APK_PATH }}
+          APK_NAME: ${{ env.APK_NAME }}
 
       # 7️⃣ Set timestamp for email
       - name: Set timestamp
