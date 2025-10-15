@@ -2,9 +2,9 @@ name: Android CI → Build APK + Upload + Email
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
   build:
@@ -41,19 +41,25 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Install jq for JSON parsing
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      # 7️⃣ Upload APK to file.io
+      # 6️⃣ Upload APK to file.io
       - name: Upload APK to file.io
+        id: upload
         run: |
-          FILE_PATH=${{ env.APK_PATH }}
-          FILE_NAME=${{ env.APK_NAME }}
+          FILE_PATH=$APK_PATH
+          FILE_NAME=$APK_NAME
           echo "Uploading $FILE_NAME to file.io..."
-          URL=$(curl -s -F "file=@$FILE_PATH" https://file.io | jq -r .link)
+          RESPONSE=$(curl -F "file=@$FILE_PATH" https://file.io)
+          URL=$(echo $RESPONSE | jq -r '.link')
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "ERROR: Upload failed, URL is empty"
+            exit 1
+          fi
           echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
           echo "APK uploaded: $URL"
+
+      # 7️⃣ Set timestamp for email
+      - name: Set timestamp
+        run: echo "EMAIL_TIMESTAMP=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
       # 8️⃣ Send email to testers
       - name: Send email to testers
@@ -74,5 +80,5 @@ jobs:
             Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
-            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
+            Timestamp: ${{ env.EMAIL_TIMESTAMP }}
           secure: true
