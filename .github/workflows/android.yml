@@ -30,26 +30,34 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # 5. Upload APK as artifact
+      # 5. Rename APK with commit hash and timestamp
+      - name: Rename APK
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          APK_PATH=app/build/outputs/apk/release/app-release.apk
+          NEW_APK_NAME=app/build/outputs/apk/release/app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
+          mv $APK_PATH $NEW_APK_NAME
+          echo "APK_PATH=$NEW_APK_NAME" >> $GITHUB_ENV
+
+      # 6. Upload APK as artifact
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: ${{ env.APK_PATH }}
 
-      # 6. Send APK via Email
+      # 7. Send APK via Email
       - name: Send APK via Email
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}   # your Gmail
-          password: ${{ secrets.EMAIL_PASSWORD }}   # Gmail password
-          from: ${{ secrets.EMAIL_USERNAME }}       # required
-          subject: "New Release APK"
-          body: "Hi team, please find the latest release APK attached."
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          attachments: app/build/outputs/apk/release/app-release.apk
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          from: ${{ secrets.EMAIL_USERNAME }}
+          subject: "New Release APK - Commit ${{ github.sha }}"
+          body: "Hi team, please find the latest release APK attached. Commit: ${{ github.sha }} Timestamp: $(date +%Y-%m-%d\ %H:%M:%S)"
+          to: tester1@example.com,tester2@example.com
+          attachments: ${{ env.APK_PATH }}
           secure: true
-
-
