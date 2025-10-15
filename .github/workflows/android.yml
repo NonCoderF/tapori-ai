@@ -1,4 +1,4 @@
-name: Android CI
+name: Android CI → Upload to Google Drive
 
 on:
   push:
@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout code
-      - uses: actions/checkout@v4
+      # 1️⃣ Checkout your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # 2. Set up JDK 17
+      # 2️⃣ Set up JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -22,53 +23,26 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. Make gradlew executable
+      # 3️⃣ Make gradlew executable
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4. Build release APK
-      - name: Build Release APK
+      # 4️⃣ Build Release APK
+      - name: Build release APK
         run: ./gradlew assembleRelease
 
-      # 5. Rename APK with commit hash + timestamp inside correct folder
+      # 5️⃣ Rename APK with commit hash and timestamp
       - name: Rename APK
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          APK_DIR=app/build/outputs/apk/release
-          APK_PATH=$APK_DIR/app-release.apk
-          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv $APK_PATH $APK_DIR/$NEW_APK_NAME
-          echo "APK_NAME=$NEW_APK_NAME" >> $GITHUB_ENV
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
+          echo "APK_PATH=app/build/outputs/apk/release/app-release-${COMMIT_HASH}-${TIMESTAMP}.apk" >> $GITHUB_ENV
 
-      # 6. List APK folder for debug
-      - name: List APK folder
-        run: ls -l app/build/outputs/apk/release/
-
-      # 7. Upload APK as artifact with correct path
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
+      # 6️⃣ Upload to Google Drive
+      - name: Upload to Google Drive
+        uses: JnyJny/upload-to-gdrive@v2
         with:
-          name: release-apk
-          path: app/build/outputs/apk/release/${{ env.APK_NAME }}
-
-      # 8. Send email to testers with artifact page link
-      - name: Send Email to Testers
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          from: ${{ secrets.EMAIL_USERNAME }}
-          subject: "New Release APK - Commit ${{ github.sha }}"
-          body: |
-            Hi team,
-
-            The latest release APK is available for download as a GitHub artifact:
-            https://github.com/${{ github.repository }}/suites/${{ github.run_id }}/artifacts
-
-            Commit: ${{ github.sha }}
-            Timestamp: $(date +%Y-%m-%d %H:%M:%S)
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          secure: true
+          credentials: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+          parent_folder_id: 1UrFU8YDFr7Px9D6YZtEtMgZfh3Itgw7z
+          file: ${{ env.APK_PATH }}
