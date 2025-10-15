@@ -27,7 +27,7 @@ jobs:
         run: ./gradlew assembleRelease
 
       - name: Upload APK as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: app/build/outputs/apk/release/app-release.apk
@@ -37,10 +37,10 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: sallyinfo365@gmil.com
-          password: sinaki365!12
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "New Release APK"
           body: "Hi team, please find the latest release APK attached."
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+          to: tester1@example.com,tester2@example.com
           attachments: app/build/outputs/apk/release/app-release.apk
           secure: true
