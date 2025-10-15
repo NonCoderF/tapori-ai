@@ -41,32 +41,39 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Install dependencies for upload
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq curl
-
-      # 7️⃣ Upload APK to AnonFiles
-      - name: Upload APK to AnonFiles
+      # 6️⃣ Upload APK to anonfiles.com with retries
+      - name: Upload APK to anonfiles.com
         id: upload
         run: |
           FILE_PATH=$APK_PATH
           FILE_NAME=$APK_NAME
           echo "Uploading $FILE_NAME to anonfiles.com..."
-          RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
-          URL=$(echo $RESPONSE | jq -r '.data.file.url.full')
-          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
-            echo "ERROR: Upload failed, URL is empty"
+          
+          # Retry logic (3 attempts)
+          for i in 1 2 3; do
+            RESPONSE=$(curl --retry 3 --retry-delay 5 -s -F "file=@$FILE_PATH" https://api.anonfiles.com/upload)
+            URL=$(echo $RESPONSE | jq -r '.data.file.url.full')
+            if [[ -n "$URL" && "$URL" != "null" ]]; then
+              echo "Upload succeeded: $URL"
+              break
+            fi
+            echo "Upload attempt $i failed, retrying..."
+            sleep 5
+          done
+
+          if [[ -z "$URL" || "$URL" == "null" ]]; then
+            echo "ERROR: Upload failed after 3 attempts"
             exit 1
           fi
-          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
-          echo "APK uploaded: $URL"
 
-      # 8️⃣ Set timestamp for email
+          echo "DIRECT_LINK=$URL" >> $GITHUB_ENV
+
+      # 7️⃣ Set timestamp for email
       - name: Set timestamp
         id: timestamp
         run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
 
-      # 9️⃣ Send email to testers
+      # 8️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
