@@ -84,7 +84,7 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
+          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com,imchirantan@gmail.com
           subject: "A new release APK has been uploaded"
           body: |
             Hi team,
