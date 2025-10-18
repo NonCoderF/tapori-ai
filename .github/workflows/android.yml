@@ -46,12 +46,13 @@ jobs:
             exit 1
           fi
 
-          RESPONSE=$(curl -s -F "file=@${{ env.APK_PATH }}" https://file.io)
+          # Upload with 14-day expiry
+          RESPONSE=$(curl -s -F "file=@${{ env.APK_PATH }}" -F "expires=14d" https://file.io)
+          echo "Response: $RESPONSE"
           URL=$(echo "$RESPONSE" | jq -r '.link')
 
           if [[ -z "$URL" || "$URL" == "null" ]]; then
             echo "❌ ERROR: Upload failed!"
-            echo "Response: $RESPONSE"
             exit 1
           fi
 
@@ -78,6 +79,8 @@ jobs:
             🧱 Version: ${{ env.APK_NAME }}
             📦 Commit: ${{ github.sha }}
             🕒 Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
+
+            ⚠️ Note: This link will expire in 14 days.
 
             Regards,  
             GitHub CI Bot 🤖
