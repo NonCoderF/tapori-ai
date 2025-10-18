@@ -1,4 +1,4 @@
-name: Build and Upload Debug APK
+name: Build and Send Debug APK via Email
 
 on:
   push:
@@ -37,29 +37,7 @@ jobs:
           echo "APK_PATH=build_output/$FILE_NAME" >> $GITHUB_ENV
           echo "APK_NAME=$FILE_NAME" >> $GITHUB_ENV
 
-      - name: Upload to file.io
-        id: upload
-        run: |
-          echo "Uploading ${{ env.APK_NAME }} to file.io..."
-          if [ ! -f "${{ env.APK_PATH }}" ]; then
-            echo "❌ ERROR: APK file not found!"
-            exit 1
-          fi
-
-          # Upload with 14-day expiry
-          RESPONSE=$(curl -s -F "file=@${{ env.APK_PATH }}" -F "expires=14d" https://file.io)
-          echo "Response: $RESPONSE"
-          URL=$(echo "$RESPONSE" | jq -r '.link')
-
-          if [[ -z "$URL" || "$URL" == "null" ]]; then
-            echo "❌ ERROR: Upload failed!"
-            exit 1
-          fi
-
-          echo "UPLOAD_LINK=$URL" >> $GITHUB_ENV
-          echo "✅ Uploaded successfully: $URL"
-
-      - name: Send Email Notification
+      - name: Send Email with APK Attachment
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -68,20 +46,18 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
           to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "🚀 New Debug Build Uploaded: TaporiAI"
+          subject: "🚀 New Debug Build: TaporiAI"
           body: |
             Hi team,
 
-            A new debug build of *Tapori AI* has been uploaded successfully.
-
-            🔗 **Download APK:** ${{ env.UPLOAD_LINK }}
+            A new debug build of *Tapori AI* is ready.  
+            See the attached APK file.
 
             🧱 Version: ${{ env.APK_NAME }}
             📦 Commit: ${{ github.sha }}
             🕒 Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
 
-            ⚠️ Note: This link will expire in 14 days.
-
             Regards,  
             GitHub CI Bot 🤖
           secure: true
+          attachments: ${{ env.APK_PATH }}
