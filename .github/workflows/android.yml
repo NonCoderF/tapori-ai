@@ -37,19 +37,26 @@ jobs:
           echo "APK_PATH=build_output/$FILE_NAME" >> $GITHUB_ENV
           echo "APK_NAME=$FILE_NAME" >> $GITHUB_ENV
 
-      - name: Upload to AnonymousFiles
+      - name: Upload to file.io
         id: upload
         run: |
-          echo "Uploading ${{ env.APK_NAME }}..."
-          RESPONSE=$(curl -s -F "file=@${{ env.APK_PATH }}" https://api.anonymousfiles.io/)
-          echo "Response: $RESPONSE"
-          URL=$(echo "$RESPONSE" | jq -r '.url')
-          if [[ -z "$URL" || "$URL" == "null" ]]; then
-            echo "ERROR: Upload failed!"
+          echo "Uploading ${{ env.APK_NAME }} to file.io..."
+          if [ ! -f "${{ env.APK_PATH }}" ]; then
+            echo "❌ ERROR: APK file not found!"
             exit 1
           fi
+
+          RESPONSE=$(curl -s -F "file=@${{ env.APK_PATH }}" https://file.io)
+          URL=$(echo "$RESPONSE" | jq -r '.link')
+
+          if [[ -z "$URL" || "$URL" == "null" ]]; then
+            echo "❌ ERROR: Upload failed!"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
           echo "UPLOAD_LINK=$URL" >> $GITHUB_ENV
-          echo "Uploaded successfully: $URL"
+          echo "✅ Uploaded successfully: $URL"
 
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
