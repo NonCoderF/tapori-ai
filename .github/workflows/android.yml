@@ -1,4 +1,4 @@
-name: Android CI → Build Debug APK + Upload + Email Notice
+name: Android CI → Build APK + Upload + Email
 
 on:
   push:
@@ -27,28 +27,62 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 4️⃣ Build Debug APK
+     # 4️⃣ Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug
+          
+          # 5️⃣ Rename Debug APK with commit hash & timestamp
+               - name: Rename Debug APK
+                 run: |
+                   COMMIT_HASH=$(git rev-parse --short HEAD)
+                   TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                   NEW_APK_NAME=app-debug-${COMMIT_HASH}-${TIMESTAMP}.apk
+                   mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/${NEW_APK_NAME}
+                   echo "APK_PATH=app/build/outputs/apk/debug/${NEW_APK_NAME}" >> $GITHUB_ENV
+                   echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 5️⃣ Rename Debug APK with commit hash & timestamp
-      - name: Rename Debug APK
+          # 6️⃣ Upload APK as GitHub artifact (no public link)
+               - name: Upload Debug APK Artifact
+                 uses: actions/upload-artifact@v4
+                 with:
+                   name: Debug-APK-${{ github.run_number }}
+                   path: ${{ env.APK_PATH }}
+
+      # 6️⃣ Upload APK to Catbox.moe
+      - name: Upload APK to Catbox
+        id: upload
         run: |
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          NEW_APK_NAME=app-debug-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/${NEW_APK_NAME}
-          echo "APK_PATH=app/build/outputs/apk/debug/${NEW_APK_NAME}" >> $GITHUB_ENV
-          echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
+          FILE_PATH=$APK_PATH
+          FILE_NAME=$APK_NAME
+          echo "Uploading $FILE_NAME to Catbox..."
+          
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            RESPONSE=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@$FILE_PATH" https://catbox.moe/user/api.php)
+            if [[ -n "$RESPONSE" ]]; then
+              echo "Upload succeeded: $RESPONSE"
+              echo "DIRECT_LINK=$RESPONSE" >> $GITHUB_ENV
+              break
+            fi
+            echo "Upload attempt $i failed, retrying..."
+            sleep $((i*5))
+          done
+          
+          if [[ -z "$RESPONSE" ]]; then
+            echo "ERROR: Upload failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+        shell: /usr/bin/bash -e {0}
+        env:
+          APK_PATH: ${{ env.APK_PATH }}
+          APK_NAME: ${{ env.APK_NAME }}
 
-      # 6️⃣ Upload APK as GitHub artifact (no public link)
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Debug-APK-${{ github.run_number }}
-          path: ${{ env.APK_PATH }}
+      # 7️⃣ Set timestamp for email
+      - name: Set timestamp
+        id: timestamp
+        run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
 
-      # 7️⃣ Send email (no direct link)
+      # 8️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -58,16 +92,15 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
           to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com,imchirantan@gmail.com
-          subject: "New Debug Build Uploaded 🚀"
+          subject: "A new release APK has been uploaded"
           body: |
             Hi team,
 
-            A new **Debug build** is ready for testing.
+            The latest release APK has been uploaded.
 
-            🔹 Please visit the GitHub Actions page to download the latest APK:
-            👉 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Direct Download Link: ${{ env.DIRECT_LINK }}
 
             Commit: ${{ github.sha }}
-            Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
-
+            Timestamp: ${{ steps.timestamp.outputs.time }}
           secure: true
+
