@@ -46,50 +46,38 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Generate Google Drive access token
-      - name: Generate Access Token from Refresh Token
-        id: get_token
-        run: |
-          ACCESS_TOKEN=$(curl -s \
-            -d client_id=${{ secrets.GDRIVE_CLIENT_ID }} \
-            -d client_secret=${{ secrets.GDRIVE_CLIENT_SECRET }} \
-            -d refresh_token=${{ secrets.GDRIVE_REFRESH_TOKEN }} \
-            -d grant_type=refresh_token \
-            https://oauth2.googleapis.com/token | jq -r '.access_token')
-          echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
-
-      # 7️⃣ Upload APK to Google Drive
-      - name: Upload APK to Google Drive
+      # 6️⃣ Upload APK to file.io
+      - name: Upload APK to file.io
         id: upload
         run: |
           FILE_PATH=$(find . -name "*release.apk" | head -n 1)
-          FILE_NAME=$(basename "$FILE_PATH")
-          
-          UPLOAD_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ steps.get_token.outputs.access_token }}" \
-            -F "metadata={name : '$FILE_NAME', parents: ['${{ secrets.GDRIVE_FOLDER_ID }}']};type=application/json;charset=UTF-8" \
-            -F "file=@$FILE_PATH;type=application/vnd.android.package-archive" \
-            "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
-          
-          FILE_ID=$(echo "$UPLOAD_RESPONSE" | jq -r '.id')
-          
-          # Make file public
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ steps.get_token.outputs.access_token }}" \
-            -H "Content-Type: application/json" \
-            -d '{"role": "reader", "type": "anyone"}' \
-            "https://www.googleapis.com/drive/v3/files/$FILE_ID/permissions"
-          
-          SHARE_LINK="https://drive.google.com/uc?id=$FILE_ID&export=download"
-          echo "share_link=$SHARE_LINK" >> $GITHUB_OUTPUT
-          echo "DIRECT_LINK=$SHARE_LINK" >> $GITHUB_ENV
+          if [ -z "$FILE_PATH" ]; then
+            echo "❌ APK not found!"
+            exit 1
+          fi
 
-      # 9️⃣ Set timestamp for email
+          RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://file.io)
+          DOWNLOAD_LINK=$(echo "$RESPONSE" | jq -r '.link')
+
+          if [ -z "$DOWNLOAD_LINK" ] || [ "$DOWNLOAD_LINK" == "null" ]; then
+            echo "❌ Failed to upload to file.io"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "share_link=$DOWNLOAD_LINK" >> $GITHUB_OUTPUT
+          echo "DIRECT_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
+
+      # 7️⃣ Display download link
+      - name: Display Download Link
+        run: echo "✅ File uploaded successfully! Download link: ${{ steps.upload.outputs.share_link }}"
+
+      # 8️⃣ Set timestamp for email
       - name: Set timestamp
         id: timestamp
         run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 🔟 Send email to testers
+      # 9️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -110,4 +98,3 @@ jobs:
             Commit: ${{ github.sha }}
             Timestamp: ${{ env.time }}
           secure: true
-
