@@ -71,7 +71,7 @@ jobs:
 
       # 7️⃣ Display download link
       - name: Display Download Link
-        run:
+        run: |
           echo "✅ File uploaded successfully! Download link: ${{ steps.upload.outputs.share_link }}"
 
       # 8️⃣ Set timestamp for email
