@@ -1,43 +1,100 @@
-name: Build and Send Debug APK via Email
+name: Android CI → Build APK + Upload + Email
 
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Set up JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+      # 3️⃣ Make gradlew executable
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Rename APK
-        id: rename
+      # 4️⃣ Build release APK
+      - name: Build signed release APK
         run: |
-          mkdir -p build_output
-          APP_NAME="TaporiAI"
-          VERSION_NAME=$(grep versionName app/build.gradle.kts | awk '{print $3}' | tr -d '"')
-          FILE_NAME="${APP_NAME}_v${VERSION_NAME}_debug.apk"
-          APK_PATH=$(find . -name "*-debug.apk" | head -n 1)
-          cp "$APK_PATH" "build_output/$FILE_NAME"
-          echo "APK_PATH=build_output/$FILE_NAME" >> $GITHUB_ENV
-          echo "APK_NAME=$FILE_NAME" >> $GITHUB_ENV
+          ./gradlew assembleRelease \
+            -PstoreFile=release.jks \
+            -PstorePassword=${{ secrets.STORE_PASSWORD }} \
+            -PkeyAlias=${{ secrets.KEY_ALIAS }} \
+            -PkeyPassword=${{ secrets.KEY_PASSWORD }}
 
-      - name: Send Email with APK Attachment
+      # 5️⃣ Rename APK with commit hash & timestamp
+      - name: Rename APK
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
+          echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
+          echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
+          
+          # 6️⃣ Upload APK to Google Drive
+          - name: Generate Access Token from Refresh Token
+            id: get_token
+            run: |
+              ACCESS_TOKEN=$(curl -s \
+                -d client_id=${{ secrets.GDRIVE_CLIENT_ID }} \
+                -d client_secret=${{ secrets.GDRIVE_CLIENT_SECRET }} \
+                -d refresh_token=${{ secrets.GDRIVE_REFRESH_TOKEN }} \
+                -d grant_type=refresh_token \
+                https://oauth2.googleapis.com/token | jq -r '.access_token')
+              
+              echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
+
+          - name: Upload APK to Google Drive
+            id: upload
+            run: |
+              FILE_PATH=$(find . -name "*release.apk" | head -n 1)
+              FILE_NAME=$(basename "$FILE_PATH")
+              
+              UPLOAD_RESPONSE=$(curl -s -X POST \
+                -H "Authorization: Bearer ${{ steps.get_token.outputs.access_token }}" \
+                -F "metadata={name : '$FILE_NAME', parents: ['${{ secrets.GDRIVE_FOLDER_ID }}']};type=application/json;charset=UTF-8" \
+                -F "file=@$FILE_PATH;type=application/vnd.android.package-archive" \
+                "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
+              
+              FILE_ID=$(echo "$UPLOAD_RESPONSE" | jq -r '.id')
+              
+              # Make file public
+              curl -s -X POST \
+                -H "Authorization: Bearer ${{ steps.get_token.outputs.access_token }}" \
+                -H "Content-Type: application/json" \
+                -d '{"role": "reader", "type": "anyone"}' \
+                "https://www.googleapis.com/drive/v3/files/$FILE_ID/permissions"
+              
+              SHARE_LINK="https://drive.google.com/uc?id=$FILE_ID&export=download"
+              echo "share_link=$SHARE_LINK" >> $GITHUB_OUTPUT
+
+          - name: Display Download Link
+            run:
+              echo "✅ File uploaded successfully! Download link: ${{ steps.upload.outputs.share_link }}"
+      
+
+      # 7️⃣ Set timestamp for email
+      - name: Set timestamp
+        id: timestamp
+        run: echo "::set-output name=time::$(date +'%Y-%m-%d %H:%M:%S')"
+
+      # 8️⃣ Send email to testers
+      - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -46,18 +103,15 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
           to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "🚀 New Debug Build: TaporiAI"
+          subject: "A new release APK has been uploaded"
           body: |
             Hi team,
 
-            A new debug build of *Tapori AI* is ready.  
-            See the attached APK file.
+            The latest release APK has been uploaded.
 
-            🧱 Version: ${{ env.APK_NAME }}
-            📦 Commit: ${{ github.sha }}
-            🕒 Timestamp: $(date +'%Y-%m-%d %H:%M:%S')
+            Direct Download Link: ${{ env.DIRECT_LINK }}
 
-            Regards,  
-            GitHub CI Bot 🤖
+            Commit: ${{ github.sha }}
+            Timestamp: ${{ steps.timestamp.outputs.time }}
           secure: true
-          attachments: ${{ env.APK_PATH }}
+
