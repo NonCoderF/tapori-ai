@@ -84,10 +84,6 @@ jobs:
           echo "share_link=$SHARE_LINK" >> $GITHUB_OUTPUT
           echo "DIRECT_LINK=$SHARE_LINK" >> $GITHUB_ENV
 
-      # 8️⃣ Display download link
-      - name: Display Download Link
-        run: echo "✅ File uploaded successfully! Download link: ${{ steps.upload.outputs.share_link }}"
-
       # 9️⃣ Set timestamp for email
       - name: Set timestamp
         id: timestamp
