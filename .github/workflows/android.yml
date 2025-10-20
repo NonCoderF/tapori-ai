@@ -46,23 +46,24 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Upload APK to file.io
-      - name: Upload APK to file.io
+      # 6️⃣ Upload APK to Catbox
+      - name: Upload APK to Catbox
         id: upload
         run: |
-          FILE_PATH="app/build/outputs/apk/release/$APK_NAME"
+          FILE_PATH="$PWD/app/build/outputs/apk/release/$APK_NAME"
           if [ ! -f "$FILE_PATH" ]; then
             echo "❌ APK not found at $FILE_PATH"
             exit 1
           fi
 
-          echo "📦 Uploading APK to file.io..."
-          RESPONSE=$(curl -s -F "file=@$FILE_PATH" -F "expires=14d" https://file.io)
+          echo "📦 Uploading APK to Catbox..."
+          RESPONSE=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@$FILE_PATH" https://catbox.moe/user/api.php)
           echo "Response: $RESPONSE"
 
-          DOWNLOAD_LINK=$(echo "$RESPONSE" | jq -r '.link')
-          if [ -z "$DOWNLOAD_LINK" ] || [ "$DOWNLOAD_LINK" == "null" ]; then
-            echo "❌ Failed to upload to file.io"
+          # Catbox returns direct URL
+          DOWNLOAD_LINK=$(echo "$RESPONSE" | tr -d '\n')
+          if [ -z "$DOWNLOAD_LINK" ] || [[ "$DOWNLOAD_LINK" != http* ]]; then
+            echo "❌ Failed to upload to Catbox"
             exit 1
           fi
 
@@ -77,7 +78,8 @@ jobs:
       # 8️⃣ Set timestamp for email
       - name: Set timestamp
         id: timestamp
-        run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+        run: |
+          echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
       # 9️⃣ Send email to testers
       - name: Send email to testers
