@@ -50,23 +50,29 @@ jobs:
       - name: Upload APK to file.io
         id: upload
         run: |
-          FILE_PATH=$(find . -name "*release.apk" | head -n 1)
-          if [ -z "$FILE_PATH" ]; then
-            echo "❌ APK not found!"
+          FILE_PATH="app/build/outputs/apk/release/$APK_NAME"
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "❌ APK not found at $FILE_PATH"
             exit 1
           fi
 
-          RESPONSE=$(curl -s -F "file=@$FILE_PATH" https://file.io)
-          DOWNLOAD_LINK=$(echo "$RESPONSE" | jq -r '.link')
+          echo "📦 Uploading APK to file.io..."
+          RESPONSE=$(curl -s -F "file=@$FILE_PATH" -F "expires=14d" https://file.io)
+          echo "Response: $RESPONSE"
 
+          DOWNLOAD_LINK=$(echo "$RESPONSE" | jq -r '.link')
           if [ -z "$DOWNLOAD_LINK" ] || [ "$DOWNLOAD_LINK" == "null" ]; then
             echo "❌ Failed to upload to file.io"
-            echo "$RESPONSE"
             exit 1
           fi
 
           echo "share_link=$DOWNLOAD_LINK" >> $GITHUB_OUTPUT
           echo "DIRECT_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
+
+      # 7️⃣ Display download link
+      - name: Display Download Link
+        run:
+          echo "✅ File uploaded successfully! Download link: ${{ steps.upload.outputs.share_link }}"
 
       # 8️⃣ Set timestamp for email
       - name: Set timestamp
