@@ -29,5 +29,4 @@ jobs:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           testers: ${{ secrets.TESTER_EMAILS }}
-          releaseNotes: ${{ secrets.RELEASE_NOTES }}
           file: app/build/outputs/apk/release/app-release.apk
