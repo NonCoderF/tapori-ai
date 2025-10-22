@@ -208,7 +208,7 @@ fun ChatScreen(
                     popUpTo(Screen.Home.route) { inclusive = true }
                 }
             }
-        ).invoke()
+        )
     }
 
     LaunchedEffect(userIdToken) {

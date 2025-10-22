@@ -8,7 +8,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 
 const val CLIENT_ID = "251119098046-ih3bq53nisp3fo39p6gmrfbth4mt2msb.apps.googleusercontent.com"
 
-fun refreshToken(context: Context, onRefreshed: () -> Unit = {}, onFailure: () -> Unit = {}) = {
+fun refreshToken(context: Context, onRefreshed: () -> Unit = {}, onFailure: () -> Unit = {}) {
     val account = GoogleSignIn.getLastSignedInAccount(context)
     if (account != null) {
         val googleSignInClient = GoogleSignIn.getClient(
@@ -19,16 +19,17 @@ fun refreshToken(context: Context, onRefreshed: () -> Unit = {}, onFailure: () -
                 .build()
         )
         val task = googleSignInClient.silentSignIn()
-
         task.addOnCompleteListener { t ->
             if (t.isSuccessful) {
-                val newIdToken = t.result?.idToken
-                Prefs.saveUser(context, newIdToken ?: "", account.displayName)
+                val newIdToken = t.result?.idToken ?: ""
+                Prefs.saveUser(context, newIdToken, account.displayName)
                 onRefreshed.invoke()
             } else {
                 onFailure.invoke()
             }
         }
+    } else {
+        onFailure.invoke()
     }
 }
 
