@@ -1,21 +1,24 @@
-name: Android CI → Build APK + Firebase App Distribution + Email
+name: Android CI → Multi-Env Build + Firebase + Email
 
 on:
   push:
-    branches: ["master"]
+    branches: ["dev", "staging", "master"]
   pull_request:
-    branches: ["master"]
+    branches: ["dev", "staging", "master"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      APK_DIR: app/build/outputs/apk/release
 
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up JDK 17
+      # 2️⃣ Set up JDK
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -27,7 +30,24 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      # 4️⃣ Build signed release APK
+      # 4️⃣ Determine environment based on branch
+      - name: Set environment variables
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_DEV }}" >> $GITHUB_ENV
+            echo "TESTER_EMAILS=${{ secrets.TESTER_EMAILS_DEV }}" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
+            echo "ENV=staging" >> $GITHUB_ENV
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_STAGING }}" >> $GITHUB_ENV
+            echo "TESTER_EMAILS=${{ secrets.TESTER_EMAILS_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "ENV=prod" >> $GITHUB_ENV
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_PROD }}" >> $GITHUB_ENV
+            echo "TESTER_EMAILS=${{ secrets.TESTER_EMAILS_PROD }}" >> $GITHUB_ENV
+          fi
+
+      # 5️⃣ Build signed release APK
       - name: Build signed release APK
         run: |
           ./gradlew assembleRelease \
@@ -36,45 +56,46 @@ jobs:
             -PkeyAlias=${{ secrets.KEY_ALIAS }} \
             -PkeyPassword=${{ secrets.KEY_PASSWORD }}
 
-      # 5️⃣ Rename APK with commit hash & timestamp
+      # 6️⃣ Rename APK with commit hash & timestamp
       - name: Rename APK
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
-          echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
+          NEW_APK_NAME=app-${ENV}-release-${COMMIT_HASH}-${TIMESTAMP}.apk
+          mv app/build/outputs/apk/release/app-release.apk ${{ env.APK_DIR }}/${NEW_APK_NAME}
+          echo "APK_PATH=${{ env.APK_DIR }}/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Set build timestamp for release notes
+      # 7️⃣ Set build timestamp
       - name: Set build timestamp
         run: echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 7️⃣ Write Firebase service account JSON to temp file
+      # 8️⃣ Write Firebase service account JSON to file
       - name: Write Firebase service account
         run: |
           echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $GITHUB_WORKSPACE/firebase.json
 
-      # 8️⃣ Upload APK to Firebase App Distribution
-      - name: Upload to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: ${{ env.APK_PATH }}
-          testers: ${{ secrets.TESTER_EMAILS }}
-          releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
+      # 9️⃣ Install Firebase CLI
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
 
-      # 9️⃣ Confirmation log
-      - name: Print confirmation
-        run: echo "✅ APK successfully uploaded to Firebase App Distribution!"
+      # 🔟 Upload APK to Firebase App Distribution and get URL
+      - name: Upload APK to Firebase App Distribution
+        id: firebase_upload
+        run: |
+          RELEASE_INFO=$(firebase appdistribution:distribute ${{ env.APK_PATH }} \
+            --app ${{ env.FIREBASE_APP_ID }} \
+            --service-credentials-file $GITHUB_WORKSPACE/firebase.json \
+            --testers "${{ env.TESTER_EMAILS }}" \
+            --release-notes "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}" \
+            --json)
+          
+          echo "$RELEASE_INFO" > release.json
+          RELEASE_URL=$(cat release.json | jq -r '.releases[0].releaseNotesShortLink // .releases[0].binaryDownloadUri // "N/A"')
+          echo "RELEASE_URL=${RELEASE_URL}" >> $GITHUB_ENV
+          echo "Release URL: ${RELEASE_URL}"
 
-      # 🔟 Set timestamp for email
-      - name: Set email timestamp
-        id: timestamp
-        run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
-
-      # 1️⃣1️⃣ Send email to testers
+      # 1️⃣1️⃣ Send email to testers with Firebase URL
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -83,16 +104,19 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "A new release APK has been uploaded"
+          to: ${{ env.TESTER_EMAILS }}
+          subject: "🔥 New ${ENV^} Android Release Uploaded to Firebase"
           body: |
-            Hi team,
+            Hi team 👋,
 
-            The latest release APK has been uploaded to Firebase App Distribution.
+            A new release APK has been uploaded to Firebase App Distribution for **${ENV^}** environment.
 
-            Commit: ${{ github.sha }}
-            Timestamp: ${{ env.time }}
+            • Commit: ${{ github.sha }}
+            • Build Time: ${{ env.BUILD_TIME }}
+            • Download APK: ${{ env.RELEASE_URL }}
 
-            Please check your email from Firebase to download the APK.
+            Please check Firebase email if needed to access the build.
+
+            Regards,  
+            Tapori Build Bot 🤖
           secure: true
-
