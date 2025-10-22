@@ -50,27 +50,32 @@ jobs:
       - name: Set build timestamp
         run: echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 7️⃣ Upload APK to Firebase App Distribution
+      # 7️⃣ Write Firebase service account JSON to temp file
+      - name: Write Firebase service account
+        run: |
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $GITHUB_WORKSPACE/firebase.json
+
+      # 8️⃣ Upload APK to Firebase App Distribution
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          serviceCredentialsFile: $GITHUB_WORKSPACE/firebase.json
           file: ${{ env.APK_PATH }}
           testers: ${{ secrets.TESTER_EMAILS }}
           releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
           debug: false
 
-      # 8️⃣ Confirmation log
+      # 9️⃣ Confirmation log
       - name: Print confirmation
         run: echo "✅ APK successfully uploaded to Firebase App Distribution!"
 
-      # 9️⃣ Set timestamp for email
+      # 🔟 Set timestamp for email
       - name: Set email timestamp
         id: timestamp
         run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 🔟 Send email to testers
+      # 1️⃣1️⃣ Send email to testers
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
