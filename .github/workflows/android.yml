@@ -1,21 +1,31 @@
-name: Android CI → Build APK + Firebase App Distribution + Email
+name: Android CI → Multi-Env Build + Firebase + Email
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - development
+          - staging
+          - uat
+          - production
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
 
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up JDK 17
+      # 2️⃣ Set up JDK
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -23,58 +33,74 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3️⃣ Grant execute permission for gradlew
+      # 3️⃣ Grant execute permission
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      # 4️⃣ Build signed release APK
-      - name: Build signed release APK
+      # 4️⃣ Select environment-specific configs
+      - name: Set environment variables
         run: |
-          ./gradlew assembleRelease \
-            -PstoreFile=release.jks \
+          echo "Selected environment: $ENVIRONMENT"
+
+          if [ "$ENVIRONMENT" == "development" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_DEV }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_DEV }}" >> $GITHUB_ENV
+            echo "VARIANT=devRelease" >> $GITHUB_ENV
+
+          elif [ "$ENVIRONMENT" == "staging" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_STAGING }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_STAGING }}" >> $GITHUB_ENV
+            echo "VARIANT=stagingRelease" >> $GITHUB_ENV
+
+          elif [ "$ENVIRONMENT" == "uat" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_UAT }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_UAT }}" >> $GITHUB_ENV
+            echo "VARIANT=uatRelease" >> $GITHUB_ENV
+
+          else
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_PROD }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_PROD }}" >> $GITHUB_ENV
+            echo "VARIANT=release" >> $GITHUB_ENV
+          fi
+
+      # 5️⃣ Build signed APK for that environment
+      - name: Build signed APK
+        run: |
+          ./gradlew assemble${{ env.VARIANT }} \
+            -PstoreFile=new-upload-key.jks \
             -PstorePassword=${{ secrets.STORE_PASSWORD }} \
             -PkeyAlias=${{ secrets.KEY_ALIAS }} \
             -PkeyPassword=${{ secrets.KEY_PASSWORD }}
 
-      # 5️⃣ Rename APK with commit hash & timestamp
+      # 6️⃣ Rename APK
       - name: Rename APK
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          NEW_APK_NAME=app-release-${COMMIT_HASH}-${TIMESTAMP}.apk
-          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/${NEW_APK_NAME}
-          echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
+          NEW_APK_NAME=${{ env.VARIANT }}-${COMMIT_HASH}-${TIMESTAMP}.apk
+          mv app/build/outputs/apk/${{ env.VARIANT }}/app-${{ env.VARIANT }}.apk app/build/outputs/apk/${{ env.VARIANT }}/${NEW_APK_NAME}
+          echo "APK_PATH=app/build/outputs/apk/${{ env.VARIANT }}/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Set build timestamp for release notes
-      - name: Set build timestamp
-        run: echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
-
-      # 7️⃣ Write Firebase service account JSON to temp file
+      # 7️⃣ Firebase service account
       - name: Write Firebase service account
         run: |
           echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $GITHUB_WORKSPACE/firebase.json
 
-      # 8️⃣ Upload APK to Firebase App Distribution
+      # 8️⃣ Upload to Firebase App Distribution
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ env.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           file: ${{ env.APK_PATH }}
-          testers: ${{ secrets.TESTER_EMAILS }}
-          releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
+          testers: ${{ env.TESTERS }}
+          releaseNotes: |
+            🔹 Environment: ${{ env.ENVIRONMENT }}
+            🔹 Commit: ${{ github.sha }}
+            🔹 Build Time: $(date +'%Y-%m-%d %H:%M:%S')
 
-      # 9️⃣ Confirmation log
-      - name: Print confirmation
-        run: echo "✅ APK successfully uploaded to Firebase App Distribution!"
-
-      # 🔟 Set timestamp for email
-      - name: Set email timestamp
-        id: timestamp
-        run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
-
-      # 1️⃣1️⃣ Send email to testers
+      # 9️⃣ Send email notification
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -83,15 +109,16 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "A new release APK has been uploaded"
+          to: ${{ env.TESTERS }}
+          subject: "[$ENVIRONMENT] New APK uploaded to Firebase"
           body: |
-            Hi team,
+            Hi Team,
 
-            The latest release APK has been uploaded to Firebase App Distribution.
+            A new *${{ env.ENVIRONMENT }}* build is available in Firebase App Distribution.
 
-            Commit: ${{ github.sha }}
-            Timestamp: ${{ env.time }}
+            - Commit: ${{ github.sha }}
+            - APK: ${{ env.APK_NAME }}
+            - Time: $(date +'%Y-%m-%d %H:%M:%S')
 
-            Please check your email from Firebase to download the APK.
+            Please check your Firebase email to download the build.
           secure: true
