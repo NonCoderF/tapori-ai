@@ -62,6 +62,8 @@ jobs:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           file: ${{ env.APK_PATH }}
+          testers: ${{ secrets.TESTER_EMAILS }}
+          releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
 
       # 9️⃣ Confirmation log
       - name: Print confirmation
