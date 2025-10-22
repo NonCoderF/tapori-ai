@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ["master"]
 
+env:
+  ENVIRONMENT: "staging" # change per workflow trigger if needed
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +26,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3️⃣ Grant execute permission for gradlew
+      # 3️⃣ Grant execute permission
       - name: Grant execute permission
         run: chmod +x gradlew
 
@@ -46,35 +49,60 @@ jobs:
           echo "APK_PATH=app/build/outputs/apk/release/${NEW_APK_NAME}" >> $GITHUB_ENV
           echo "APK_NAME=${NEW_APK_NAME}" >> $GITHUB_ENV
 
-      # 6️⃣ Set build timestamp for release notes
+      # 6️⃣ Set build timestamp
       - name: Set build timestamp
         run: echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 7️⃣ Write Firebase service account JSON to temp file
-      - name: Write Firebase service account
+      # 7️⃣ Set environment variables per environment
+      - name: Set environment variables
         run: |
-          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $GITHUB_WORKSPACE/firebase.json
+          echo "Selected environment: $ENVIRONMENT"
+          if [ "$ENVIRONMENT" == "development" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_DEV }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_DEV }}" >> $GITHUB_ENV
+            echo "VARIANT=devRelease" >> $GITHUB_ENV
+            echo "DOWNLOAD_LINK=${{ secrets.FIREBASE_DOWNLOAD_LINK_DEV }}" >> $GITHUB_ENV
+          elif [ "$ENVIRONMENT" == "staging" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_STAGING }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_STAGING }}" >> $GITHUB_ENV
+            echo "VARIANT=stagingRelease" >> $GITHUB_ENV
+            echo "DOWNLOAD_LINK=${{ secrets.FIREBASE_DOWNLOAD_LINK_STAGING }}" >> $GITHUB_ENV
+          elif [ "$ENVIRONMENT" == "uat" ]; then
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_UAT }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_UAT }}" >> $GITHUB_ENV
+            echo "VARIANT=uatRelease" >> $GITHUB_ENV
+            echo "DOWNLOAD_LINK=${{ secrets.FIREBASE_DOWNLOAD_LINK_UAT }}" >> $GITHUB_ENV
+          else
+            echo "FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID_PROD }}" >> $GITHUB_ENV
+            echo "TESTERS=${{ secrets.TESTER_EMAILS_PROD }}" >> $GITHUB_ENV
+            echo "VARIANT=release" >> $GITHUB_ENV
+            echo "DOWNLOAD_LINK=${{ secrets.FIREBASE_DOWNLOAD_LINK_PROD }}" >> $GITHUB_ENV
+          fi
 
-      # 8️⃣ Upload APK to Firebase App Distribution
+      # 8️⃣ Write Firebase service account JSON to temp file
+      - name: Write Firebase service account
+        run: echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $GITHUB_WORKSPACE/firebase.json
+
+      # 9️⃣ Upload APK to Firebase App Distribution
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
+          appId: ${{ env.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           file: ${{ env.APK_PATH }}
-          testers: ${{ secrets.TESTER_EMAILS }}
+          testers: ${{ env.TESTERS }}
           releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
 
-      # 9️⃣ Confirmation log
+      # 🔟 Confirmation log
       - name: Print confirmation
         run: echo "✅ APK successfully uploaded to Firebase App Distribution!"
 
-      # 🔟 Set timestamp for email
+      # 1️⃣1️⃣ Set timestamp for email
       - name: Set email timestamp
         id: timestamp
         run: echo "time=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
-      # 1️⃣1️⃣ Send email to testers
+      # 1️⃣2️⃣ Send email to testers with direct download link
       - name: Send email to testers
         uses: dawidd6/action-send-mail@v3
         with:
@@ -83,15 +111,21 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           from: ${{ secrets.EMAIL_USERNAME }}
-          to: blackiethebigboss1@gmail.com,sallyinfo365@gmail.com
-          subject: "A new release APK has been uploaded"
+          to: ${{ env.TESTERS }}
+          subject: "[$ENVIRONMENT] New APK uploaded to Firebase"
           body: |
-            Hi team,
+            Hi Team,
 
-            The latest release APK has been uploaded to Firebase App Distribution.
+            A new *${{ env.ENVIRONMENT }}* build has been uploaded to Firebase App Distribution.
 
-            Commit: ${{ github.sha }}
-            Timestamp: ${{ env.time }}
+            🔹 **Commit:** ${{ github.sha }}
+            🔹 **Build Time:** ${{ env.BUILD_TIME }}
+            🔹 **APK:** ${{ env.APK_NAME }}
 
-            Please check your email from Firebase to download the APK.
+            👉 [Click here to download the build](${{ env.DOWNLOAD_LINK }})
+
+            You can also find it under Firebase App Distribution → *${{ env.ENVIRONMENT }}* app.
+
+            Best,  
+            Tapori CI/CD Bot 🤖
           secure: true
