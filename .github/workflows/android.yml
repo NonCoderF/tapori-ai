@@ -60,7 +60,7 @@ jobs:
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFile: $GITHUB_WORKSPACE/firebase.json
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           file: ${{ env.APK_PATH }}
           testers: ${{ secrets.TESTER_EMAILS }}
           releaseNotes: "Commit: ${{ github.sha }} | Built on: ${{ env.BUILD_TIME }}"
