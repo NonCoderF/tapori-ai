@@ -18,6 +18,7 @@ import com.sparkstudios.taporiai.utils.Prefs
 sealed class Screen(val route: String) {
     object SignIn : Screen("sign_in")
     object Home : Screen("home")
+
 }
 
 class MainActivity : ComponentActivity() {
