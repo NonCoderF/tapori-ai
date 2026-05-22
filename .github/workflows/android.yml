@@ -30,11 +30,7 @@ jobs:
       # 4️⃣ Build signed release APK
       - name: Build signed release APK
         run: |
-          ./gradlew assembleRelease \
-            -PstoreFile=new-upload-key.jks \
-            -PstorePassword=${{ secrets.STORE_PASSWORD }} \
-            -PkeyAlias=${{ secrets.KEY_ALIAS }} \
-            -PkeyPassword=${{ secrets.KEY_PASSWORD }}
+          ./gradlew assembleDebug 
       # 5️⃣ Rename APK with commit hash & timestamp
       - name: Rename APK
         run: |
