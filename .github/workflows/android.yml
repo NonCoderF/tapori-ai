@@ -121,3 +121,4 @@ jobs:
             ${{ env.APK_NAME }}
 
             Please check Firebase App Distribution email to download the latest build.
+          attachments: ${{ env.APK_PATH }}
