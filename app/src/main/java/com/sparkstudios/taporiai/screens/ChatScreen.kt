@@ -1,6 +1,5 @@
 package com.sparkstudios.taporiai.screens
 
-import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,10 +41,10 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,24 +56,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.google.gson.Gson
-import com.razorpay.Checkout
 import com.sparkstudios.tapori.ai.chatbot.R
 import com.sparkstudios.taporiai.Screen
-import com.sparkstudios.taporiai.network.ChatDownloadRequest
-import com.sparkstudios.taporiai.network.ChatRequest
-import com.sparkstudios.taporiai.network.ErrorResponse
-import com.sparkstudios.taporiai.network.RetrofitClient
-import com.sparkstudios.taporiai.utils.Prefs
-import com.sparkstudios.taporiai.utils.generateRandomString
-import com.sparkstudios.taporiai.utils.logout
-import com.sparkstudios.taporiai.utils.refreshToken
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.json.JSONObject
-import java.util.UUID
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import com.sparkstudios.taporiai.presentation.chat.ChatViewModel
 
 data class ChatMessage(
     val id: Int,
@@ -87,23 +76,11 @@ fun ChatScreen(
     navController: NavController,
     onClose : () -> Unit,
     onPaymentInvoked : () -> Unit,
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
 
-    val userName = Prefs.getUserName(context)
-
-    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
-    var inputText by remember { mutableStateOf(TextFieldValue("")) }
-    var isSending by remember { mutableStateOf(false) }
-
-    val userIdToken = Prefs.getUserIdToken(context) ?: ""
-
-    var isLoading by remember { mutableStateOf(false) }
-    var loadingError: String? by remember { mutableStateOf(null) }
-    var chatError: String? by remember { mutableStateOf(null) }
-    var loadingErrorResponseCode : Int? by remember { mutableStateOf(null) }
-    var chatErrorResponseCode : Int? by remember { mutableStateOf(null) }
     var showCloseAlertDialog by remember { mutableStateOf(false) }
     var showLogoutAlertDialog by remember { mutableStateOf(false) }
 
@@ -127,10 +104,7 @@ fun ChatScreen(
             message = "Sach mein logout kar raha hain kya?",
             onConfirm = {
                 showLogoutAlertDialog = false
-                logout(context)
-                navController.navigate(Screen.SignIn.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
-                }
+                viewModel.logoutUser()
             },
             onDismiss = {
                 showLogoutAlertDialog = false
@@ -142,87 +116,22 @@ fun ChatScreen(
         showCloseAlertDialog = true
     }
 
-    LaunchedEffect(chatError) {
-        if (chatError != null){
-            isSending = false
-            Toast.makeText(context, chatError, Toast.LENGTH_SHORT).show()
+    LaunchedEffect(uiState.navigateToSignIn) {
+        if (uiState.navigateToSignIn) {
+            navController.navigate(Screen.SignIn.route) {
+                popUpTo(Screen.Home.route) { inclusive = true }
+            }
         }
     }
 
-
-    fun loadChats() {
-        chatError = null
-        isLoading = true
-        refreshToken(
-            context = context,
-            onRefreshed = {
-                coroutineScope.launch {
-                    try {
-                        val response = RetrofitClient.apiService.downloadChat(
-                            ChatDownloadRequest(idToken = userIdToken)
-                        )
-                        if (response.isSuccessful) {
-                            response.body()?.chats?.let { msgs ->
-                                messages = msgs.mapIndexed { index, msg ->
-                                    ChatMessage(
-                                        id = index,
-                                        text = msg.content,
-                                        isUser = msg.role == "user"
-                                    )
-                                }
-
-                                if (msgs.isNotEmpty()){
-                                    Prefs.saveChatId(context, msgs.last().chat_id.toString())
-                                }else{
-                                    Prefs.saveChatId(context, generateRandomString())
-                                }
-                            }
-                            loadingError = null
-                        } else {
-                            isLoading = false
-                            loadingErrorResponseCode = response.code()
-                            if (response.code() == 401){
-                                loadingError = "Arre bhai, token expire ho gaya!"
-                            }else{
-                                val errorJson = response.errorBody()?.string()
-                                val errorMessage = errorJson?.let {
-                                    try {
-                                        Gson().fromJson(it, ErrorResponse::class.java).error
-                                    } catch (e: Exception) {
-                                        "Arre bhai, server ka scene samajh nahi aaya re!"
-                                    }
-                                } ?: "Arre bhai, server ka scene samajh nahi aaya re!"
-                                loadingError = errorMessage
-                            }
-                        }
-                    } catch (e: Exception) {
-                        loadingError = "Arre bhai, chat pakad nahi paaye… dobara try kar re!"
-                    } finally {
-                        isLoading = false
-                    }
-                }
-            },
-            onFailure = {
-                logout(context)
-                navController.navigate(Screen.SignIn.route) {
-                    popUpTo(Screen.Home.route) { inclusive = true }
-                }
-            }
-        )
-    }
-
-    LaunchedEffect(userIdToken) {
-        loadChats()
-    }
-
-    if (isLoading) {
+    if (uiState.isLoading) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
                 text = "Oye, chat ka jugaad ho raha hai re, thoda time de!",
-                fontSize = 24.sp,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(16.dp)
             )
@@ -232,30 +141,26 @@ fun ChatScreen(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
+            val loadingError = uiState.loadingError
             if (loadingError != null) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = loadingError
-                            ?: "Arre bhai, chat pakad nahi paaye… dobara try kar re!",
-                        fontSize = 24.sp,
+                        text = loadingError,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(16.dp)
                     )
 
                     RetryButton(
-                        text = if (loadingErrorResponseCode == 401) "Login Again" else "Chal Dobara!"
+                        text = if (uiState.loadingErrorResponseCode == 401) "Login Again" else "Chal Dobara!"
                     ) {
-                        coroutineScope.launch {
-                            if (loadingErrorResponseCode == 401){
-                                logout(context)
-                                navController.navigate(Screen.SignIn.route) {
-                                    popUpTo(Screen.Home.route) { inclusive = true }
-                                }
-                            }
-                            loadChats()
+                        if (uiState.loadingErrorResponseCode == 401){
+                            viewModel.logoutUser()
+                        } else {
+                            viewModel.loadChats()
                         }
                     }
                 }
@@ -266,6 +171,7 @@ fun ChatScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color.White)
+                                .navigationBarsPadding()
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -273,68 +179,12 @@ fun ChatScreen(
                                 modifier = Modifier
                             ) {
                                 ChatInputBar(
-                                    message = inputText,
-                                    onMessageChange = { inputText = it },
-                                    isSending = isSending,
+                                    message = uiState.inputText,
+                                    onMessageChange = { viewModel.onInputTextChanged(it) },
+                                    isSending = uiState.isSending,
                                     onSendClick = {
-                                        if (inputText.text.isNotBlank() && !isSending) {
-                                            val prompt = inputText.text
-                                            inputText = TextFieldValue("")
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                try {
-                                                    val userId = Prefs.getUserIdToken(context) ?: ""
-
-                                                    messages = messages + ChatMessage(
-                                                        id = messages.size + 1,
-                                                        text = prompt,
-                                                        isUser = true
-                                                    )
-
-                                                    isSending = true
-
-                                                    val response = RetrofitClient.apiService.sendMessage(
-                                                        ChatRequest(
-                                                            idToken = userId,
-                                                            chat_id = Prefs.getChatId(context) ?: "",
-                                                            prompt = prompt,
-                                                            system_message = "You are a Mumbai Tapori assistant. Reply in Mumbai slang hinglish language fully.",
-                                                            max_context_messages = 50
-                                                        )
-                                                    )
-                                                    if(response.isSuccessful){
-                                                        messages = messages + ChatMessage(
-                                                            id = messages.size + 1,
-                                                            text = response.body()?.reply ?: "No response",
-                                                            isUser = false
-                                                        )
-                                                        isSending = false
-                                                    }else{
-                                                        chatErrorResponseCode = response.code()
-                                                        if (response.code() == 402){
-                                                            val responseText = if (response.code() == 402) {
-                                                                val json =
-                                                                    JSONObject(response.errorBody()?.string() ?: "{}")
-                                                                val reply =
-                                                                    json.optString("reply", "Credit khatam ho gaya re!")
-                                                                reply
-                                                            } else {
-                                                                "Error: ${response.code()}"
-                                                            }
-                                                            messages = messages + ChatMessage(
-                                                                id = messages.size + 1,
-                                                                text = responseText,
-                                                                isUser = false
-                                                            )
-                                                        }
-                                                        isSending = false
-                                                    }
-                                                } catch (e: Exception) {
-                                                    chatError = "Oops, chat pakad nahi paaye… dobara try kar re!"
-                                                } finally {
-                                                    isLoading = false
-                                                    isSending = false
-                                                }
-                                            }
+                                        if (uiState.inputText.text.isNotBlank() && !uiState.isSending) {
+                                            viewModel.sendMessage()
                                         }
                                     }
                                 )
@@ -347,6 +197,7 @@ fun ChatScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color.White)
+                                .statusBarsPadding()
                                 .padding(
                                     16.dp
                                 ),
@@ -360,8 +211,8 @@ fun ChatScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Kya re item, \n$userName!",
-                                    fontSize = 24.sp,
+                                    "Kya re item, \n${uiState.userName}!",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp),
                                     modifier = Modifier.padding(0.dp),
                                     textAlign = TextAlign.Start
                                 )
@@ -379,15 +230,9 @@ fun ChatScreen(
                                     )
                                 }
                             }
-
                         }
                     },
-                    modifier = Modifier.padding(
-                        top = 32.dp,
-                        bottom = 56.dp,
-                        start = 16.dp,
-                        end = 16.dp
-                    ),
+                    modifier = Modifier.fillMaxSize(),
                 ) { padding ->
                     LazyColumn(
                         modifier = Modifier
@@ -396,15 +241,15 @@ fun ChatScreen(
                             .background(Color.White),
                         reverseLayout = true
                     ) {
-                        if (chatErrorResponseCode == 402) {
+                        if (uiState.chatErrorResponseCode == 402) {
                             item {
                                 PayButton(text = "Paisa dalo") {
-                                    chatErrorResponseCode = null
+                                    viewModel.clearChatErrorResponseCode()
                                     onPaymentInvoked.invoke()
                                 }
                             }
                         }
-                        items(messages.reversed()) { message ->
+                        items(uiState.messages.reversed()) { message ->
                             ChatBubble(message)
                         }
                     }
@@ -426,7 +271,7 @@ fun ChatInputBar(
             .fillMaxWidth()
             .background(Color.White)
             .padding(4.dp)
-            .padding(WindowInsets.ime.exclude(WindowInsets.navigationBars).asPaddingValues()),
+            .imePadding(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextField(
@@ -510,8 +355,8 @@ fun ChatBubble(message: ChatMessage) {
         ) {
             Text(
                 text = message.text,
-                color = if (message.isUser) Color.White else Color.Black,
-                fontWeight = FontWeight.Normal
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (message.isUser) Color.White else Color.Black
             )
         }
     }
@@ -529,8 +374,8 @@ fun RetryButton(
     ) {
         Text(
             text = text,
-            color = Color.Black,
-            fontSize = 16.sp
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp),
+            color = Color.Black
         )
     }
 }
@@ -547,8 +392,8 @@ fun PayButton(
     ) {
         Text(
             text = text,
-            color = Color.Black,
-            fontSize = 16.sp
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp),
+            color = Color.Black
         )
     }
 }
@@ -566,14 +411,14 @@ fun ChatAlertDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title) },
-        text = { Text(text = message) },
+        title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
+        text = { Text(text = message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.padding(8.dp)
             ) {
-                Text(confirmText)
+                Text(confirmText, style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
@@ -581,7 +426,7 @@ fun ChatAlertDialog(
                 onClick = onDismiss,
                 modifier = Modifier.padding(8.dp)
             ) {
-                Text(dismissText)
+                Text(dismissText, style = MaterialTheme.typography.labelLarge)
             }
         }
     )

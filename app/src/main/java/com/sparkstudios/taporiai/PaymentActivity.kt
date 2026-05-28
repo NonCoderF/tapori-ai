@@ -2,12 +2,10 @@ package com.sparkstudios.taporiai
 
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
-import android.widget.Toast.LENGTH_SHORT
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,46 +13,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.lifecycleScope
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
-import com.sparkstudios.taporiai.network.CreditRequest
-import com.sparkstudios.taporiai.network.RetrofitClient
+import com.sparkstudios.taporiai.presentation.payment.PaymentViewModel
 import com.sparkstudios.taporiai.screens.CreditPacksScreen
 import com.sparkstudios.taporiai.ui.theme.TaporiAITheme
-import com.sparkstudios.taporiai.utils.Prefs
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
 import org.json.JSONObject
+import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 
+@AndroidEntryPoint
 class PaymentActivity : ComponentActivity(), PaymentResultListener {
 
-    private var creditsToAdd = 0
-    private var showLoader by mutableStateOf(false)
-    private var showSuccessDialog by mutableStateOf(false)
-    private var newCredits by mutableStateOf(0)
+    private val viewModel: PaymentViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             TaporiAITheme {
+                val uiState by viewModel.uiState.collectAsState()
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     CreditPacksScreen(
                         onBuyClick = { price, chats ->
-                            creditsToAdd = chats
+                            viewModel.setCreditsToAdd(chats)
                             startPayment(this@PaymentActivity, price)
                         }
                     )
 
-                    if (showLoader) {
+                    if (uiState.showLoader) {
                         LoaderDialog()
                     }
 
-                    if (showSuccessDialog) {
+                    if (uiState.showSuccessDialog) {
                         SuccessDialog(
-                            credits = newCredits,
-                            onDismiss = { showSuccessDialog = false }
+                            credits = uiState.newCredits,
+                            onDismiss = { viewModel.dismissSuccessDialog() }
                         )
                     }
                 }
@@ -63,27 +59,7 @@ class PaymentActivity : ComponentActivity(), PaymentResultListener {
     }
 
     override fun onPaymentSuccess(p0: String?) {
-        showLoader = true
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.apiService.addCredit(
-                    CreditRequest(
-                        idToken = Prefs.getUserIdToken(this@PaymentActivity) ?: "",
-                        creditsToAdd = creditsToAdd
-                    )
-                )
-
-                if (response.isSuccessful) {
-                    val credits = response.body()?.credits ?: 0
-                    newCredits = credits
-                    showSuccessDialog = true
-                }
-            } catch (e: Exception) {
-                Log.e("Exception", e.toString())
-            } finally {
-                showLoader = false
-            }
-        }
+        viewModel.handlePaymentSuccess()
     }
 
     override fun onPaymentError(p0: Int, p1: String?) {

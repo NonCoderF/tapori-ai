@@ -14,6 +14,9 @@ import com.sparkstudios.taporiai.screens.CreditPacksScreen
 import com.sparkstudios.taporiai.screens.SignInScreen
 import com.sparkstudios.taporiai.ui.theme.TaporiAITheme
 import com.sparkstudios.taporiai.utils.Prefs
+import dagger.hilt.android.AndroidEntryPoint
+
+import androidx.activity.enableEdgeToEdge
 
 sealed class Screen(val route: String) {
     object SignIn : Screen("sign_in")
@@ -21,8 +24,10 @@ sealed class Screen(val route: String) {
 
 }
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             TaporiAITheme {
