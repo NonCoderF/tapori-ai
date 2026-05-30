@@ -13,20 +13,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.ViewModelProvider
 import com.razorpay.Checkout
 import com.razorpay.PaymentResultListener
 import com.sparkstudios.taporiai.presentation.payment.PaymentViewModel
 import com.sparkstudios.taporiai.screens.CreditPacksScreen
 import com.sparkstudios.taporiai.ui.theme.TaporiAITheme
-import dagger.hilt.android.AndroidEntryPoint
 import org.json.JSONObject
 import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 
-@AndroidEntryPoint
 class PaymentActivity : ComponentActivity(), PaymentResultListener {
 
-    private val viewModel: PaymentViewModel by viewModels()
+    private val viewModelFactory: ViewModelProvider.Factory by lazy {
+        (application as TaporiApplication).appComponent.viewModelFactory()
+    }
+
+    private val viewModel: PaymentViewModel by viewModels { viewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

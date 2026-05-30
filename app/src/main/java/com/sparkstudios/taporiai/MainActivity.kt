@@ -4,17 +4,18 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.sparkstudios.taporiai.presentation.chat.ChatViewModel
 import com.sparkstudios.taporiai.screens.ChatScreen
-import com.sparkstudios.taporiai.screens.CreditPacksScreen
 import com.sparkstudios.taporiai.screens.SignInScreen
 import com.sparkstudios.taporiai.ui.theme.TaporiAITheme
 import com.sparkstudios.taporiai.utils.Prefs
-import dagger.hilt.android.AndroidEntryPoint
 
 import androidx.activity.enableEdgeToEdge
 
@@ -24,8 +25,14 @@ sealed class Screen(val route: String) {
 
 }
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val viewModelFactory: ViewModelProvider.Factory by lazy {
+        (application as TaporiApplication).appComponent.viewModelFactory()
+    }
+
+    private val chatViewModel: ChatViewModel by viewModels { viewModelFactory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -50,7 +57,8 @@ class MainActivity : ComponentActivity() {
                     onClose = { finish() },
                     onPaymentInvoked = {
                         startActivity(Intent(this@MainActivity, PaymentActivity::class.java))
-                    }
+                    },
+                    viewModel = chatViewModel
                 )
             }
         }

@@ -1,7 +1,14 @@
 package com.sparkstudios.taporiai
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import com.sparkstudios.taporiai.di.AppComponent
+import com.sparkstudios.taporiai.di.DaggerAppComponent
 
-@HiltAndroidApp
-class TaporiApplication : Application()
+class TaporiApplication : Application() {
+    lateinit var appComponent: AppComponent
+
+    override fun onCreate() {
+        super.onCreate()
+        appComponent = DaggerAppComponent.factory().create(this)
+    }
+}

@@ -1,12 +1,10 @@
 package com.sparkstudios.taporiai.presentation.payment
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sparkstudios.taporiai.repository.TaporiRepository
 import com.sparkstudios.taporiai.utils.Prefs
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,10 +18,9 @@ data class PaymentUiState(
     val newCredits: Int = 0
 )
 
-@HiltViewModel
 class PaymentViewModel @Inject constructor(
     private val repository: TaporiRepository,
-    @ApplicationContext private val context: Context
+    private val application: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PaymentUiState())
@@ -39,7 +36,7 @@ class PaymentViewModel @Inject constructor(
         _uiState.update { it.copy(showLoader = true) }
         viewModelScope.launch {
             try {
-                val idToken = Prefs.getUserIdToken(context) ?: ""
+                val idToken = Prefs.getUserIdToken(application) ?: ""
                 val response = repository.addCredit(idToken, creditsToAdd)
                 if (response.isSuccessful) {
                     val credits = response.body()?.credits ?: 0

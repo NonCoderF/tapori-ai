@@ -1,7 +1,17 @@
 package com.sparkstudios.taporiai.screens
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +67,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.sparkstudios.tapori.ai.chatbot.R
 import com.sparkstudios.taporiai.Screen
@@ -64,6 +75,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import com.sparkstudios.taporiai.presentation.chat.ChatViewModel
+import java.util.Locale
 
 data class ChatMessage(
     val id: Int,
@@ -76,13 +88,128 @@ fun ChatScreen(
     navController: NavController,
     onClose : () -> Unit,
     onPaymentInvoked : () -> Unit,
-    viewModel: ChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
     var showCloseAlertDialog by remember { mutableStateOf(false) }
     var showLogoutAlertDialog by remember { mutableStateOf(false) }
+    var isListening by remember { mutableStateOf(false) }
+    var startListeningAfterPermission by remember { mutableStateOf(false) }
+    var shouldSpeakNextReply by remember { mutableStateOf(false) }
+    var voiceRequestMessageCount by remember { mutableStateOf<Int?>(null) }
+    var textToSpeech by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isTextToSpeechReady by remember { mutableStateOf(false) }
+
+    val speechRecognizer = remember(context) {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        } else {
+            null
+        }
+    }
+
+    fun startSpeechRecognizer() {
+        val recognizer = speechRecognizer
+        if (recognizer == null) {
+            Toast.makeText(context, "Voice input available nahi hai", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Bol bhidu...")
+        }
+
+        isListening = true
+        recognizer.startListening(intent)
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startListeningAfterPermission = true
+        } else {
+            Toast.makeText(context, "Mic permission chahiye voice ke liye", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(context) {
+        var tts: TextToSpeech? = null
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val languageResult = tts?.setLanguage(Locale("hi", "IN"))
+                if (languageResult == TextToSpeech.LANG_MISSING_DATA || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    tts?.language = Locale.getDefault()
+                }
+                isTextToSpeechReady = true
+            } else {
+                isTextToSpeechReady = false
+            }
+        }
+        textToSpeech = tts
+
+        onDispose {
+            isTextToSpeechReady = false
+            textToSpeech = null
+            tts?.stop()
+            tts?.shutdown()
+        }
+    }
+
+    DisposableEffect(speechRecognizer) {
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                isListening = true
+            }
+
+            override fun onBeginningOfSpeech() = Unit
+            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onBufferReceived(buffer: ByteArray?) = Unit
+            override fun onEndOfSpeech() = Unit
+            override fun onPartialResults(partialResults: Bundle?) = Unit
+            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+
+            override fun onError(error: Int) {
+                isListening = false
+                if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    Toast.makeText(context, "Kuch sunai nahi diya", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Voice input failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResults(results: Bundle?) {
+                isListening = false
+                val spokenText = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    ?.trim()
+
+                if (spokenText.isNullOrBlank()) {
+                    Toast.makeText(context, "Kuch sunai nahi diya", Toast.LENGTH_SHORT).show()
+                } else {
+                    voiceRequestMessageCount = uiState.messages.size
+                    shouldSpeakNextReply = true
+                    viewModel.sendVoiceMessage(spokenText)
+                }
+            }
+        })
+
+        onDispose {
+            speechRecognizer?.destroy()
+        }
+    }
+
+    LaunchedEffect(startListeningAfterPermission) {
+        if (startListeningAfterPermission) {
+            startListeningAfterPermission = false
+            startSpeechRecognizer()
+        }
+    }
 
     if (showCloseAlertDialog){
         ChatAlertDialog(
@@ -120,6 +247,29 @@ fun ChatScreen(
         if (uiState.navigateToSignIn) {
             navController.navigate(Screen.SignIn.route) {
                 popUpTo(Screen.Home.route) { inclusive = true }
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.messages, uiState.isSending, shouldSpeakNextReply, isTextToSpeechReady) {
+        val requestCount = voiceRequestMessageCount
+        if (shouldSpeakNextReply && requestCount != null && !uiState.isSending) {
+            val latestAssistantReply = uiState.messages
+                .drop(requestCount)
+                .lastOrNull { !it.isUser }
+                ?.text
+
+            if (!latestAssistantReply.isNullOrBlank()) {
+                if (isTextToSpeechReady) {
+                    textToSpeech?.speak(
+                        latestAssistantReply,
+                        TextToSpeech.QUEUE_FLUSH,
+                        null,
+                        "tapori_voice_reply_${uiState.messages.size}"
+                    )
+                }
+                shouldSpeakNextReply = false
+                voiceRequestMessageCount = null
             }
         }
     }
@@ -182,6 +332,21 @@ fun ChatScreen(
                                     message = uiState.inputText,
                                     onMessageChange = { viewModel.onInputTextChanged(it) },
                                     isSending = uiState.isSending,
+                                    isListening = isListening,
+                                    onMicClick = {
+                                        if (!uiState.isSending && !isListening) {
+                                            val hasPermission = ContextCompat.checkSelfPermission(
+                                                context,
+                                                Manifest.permission.RECORD_AUDIO
+                                            ) == PackageManager.PERMISSION_GRANTED
+
+                                            if (hasPermission) {
+                                                startSpeechRecognizer()
+                                            } else {
+                                                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                            }
+                                        }
+                                    },
                                     onSendClick = {
                                         if (uiState.inputText.text.isNotBlank() && !uiState.isSending) {
                                             viewModel.sendMessage()
@@ -263,7 +428,9 @@ fun ChatScreen(
 fun ChatInputBar(
     message: TextFieldValue,
     isSending: Boolean = false,
+    isListening: Boolean = false,
     onMessageChange: (TextFieldValue) -> Unit,
+    onMicClick: () -> Unit,
     onSendClick: () -> Unit
 ) {
     Row(
@@ -292,6 +459,42 @@ fun ChatInputBar(
             minLines = 1,
             maxLines = Int.MAX_VALUE, // no restriction
         )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = if (isListening) Color(0xFF128C7E) else Color(0xFF1D4760),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isListening) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                IconButton(
+                    onClick = onMicClick,
+                    enabled = !isSending,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = if (isSending) Color.LightGray else Color(0xFF1D4760),
+                            shape = CircleShape
+                        )
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.outline_mic_24),
+                        contentDescription = "Voice input"
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.width(8.dp))
 

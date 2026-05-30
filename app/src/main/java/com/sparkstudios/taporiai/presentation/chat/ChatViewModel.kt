@@ -1,6 +1,6 @@
 package com.sparkstudios.taporiai.presentation.chat
 
-import android.content.Context
+import android.app.Application
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +12,6 @@ import com.sparkstudios.taporiai.utils.Prefs
 import com.sparkstudios.taporiai.utils.generateRandomString
 import com.sparkstudios.taporiai.utils.logout
 import com.sparkstudios.taporiai.utils.refreshToken
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,17 +32,16 @@ data class ChatUiState(
     val navigateToSignIn: Boolean = false
 )
 
-@HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: TaporiRepository,
-    @ApplicationContext private val context: Context
+    private val application: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.update { it.copy(userName = Prefs.getUserName(context) ?: "") }
+        _uiState.update { it.copy(userName = Prefs.getUserName(application) ?: "") }
         loadChats()
     }
 
@@ -59,11 +56,11 @@ class ChatViewModel @Inject constructor(
     fun loadChats() {
         _uiState.update { it.copy(isLoading = true, loadingError = null, loadingErrorResponseCode = null) }
         refreshToken(
-            context = context,
+            context = application,
             onRefreshed = {
                 viewModelScope.launch {
                     try {
-                        val userIdToken = Prefs.getUserIdToken(context) ?: ""
+                        val userIdToken = Prefs.getUserIdToken(application) ?: ""
                         val response = repository.downloadChat(userIdToken)
                         if (response.isSuccessful) {
                             response.body()?.chats?.let { msgs ->
@@ -76,9 +73,9 @@ class ChatViewModel @Inject constructor(
                                 }
 
                                 if (msgs.isNotEmpty()) {
-                                    Prefs.saveChatId(context, msgs.last().chat_id)
+                                    Prefs.saveChatId(application, msgs.last().chat_id)
                                 } else {
-                                    Prefs.saveChatId(context, generateRandomString())
+                                    Prefs.saveChatId(application, generateRandomString())
                                 }
 
                                 _uiState.update {
@@ -128,7 +125,14 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage() {
-        val prompt = _uiState.value.inputText.text
+        sendPrompt(_uiState.value.inputText.text)
+    }
+
+    fun sendVoiceMessage(prompt: String) {
+        sendPrompt(prompt)
+    }
+
+    private fun sendPrompt(prompt: String) {
         if (prompt.isBlank() || _uiState.value.isSending) return
 
         // Clear input text UI immediately
@@ -150,8 +154,8 @@ class ChatViewModel @Inject constructor(
             }
 
             try {
-                val userId = Prefs.getUserIdToken(context) ?: ""
-                val chatId = Prefs.getChatId(context) ?: ""
+                val userId = Prefs.getUserIdToken(application) ?: ""
+                val chatId = Prefs.getChatId(application) ?: ""
                 val response = repository.sendMessage(
                     idToken = userId,
                     chatId = chatId,
@@ -203,7 +207,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun logoutUser() {
-        logout(context)
+        logout(application)
         _uiState.update { it.copy(navigateToSignIn = true) }
     }
 }
