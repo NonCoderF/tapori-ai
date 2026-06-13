@@ -17,6 +17,18 @@ android {
         targetSdk = 35
         versionCode = 11
         versionName = "11.0"
+
+        val localProperties = java.util.Properties().apply {
+            val localPropertiesFile = rootProject.file("local.properties")
+            if (localPropertiesFile.exists()) {
+                localPropertiesFile.inputStream().use { load(it) }
+            }
+        }
+        val razorpayKeyId = localProperties.getProperty("razorpay.key.id") ?: ""
+        val googleClientId = localProperties.getProperty("google.client.id") ?: ""
+
+        buildConfigField("String", "RAZORPAY_KEY_ID", "\"$razorpayKeyId\"")
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$googleClientId\"")
     }
 
     buildFeatures {

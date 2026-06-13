@@ -68,7 +68,7 @@ class PaymentActivity : ComponentActivity(), PaymentResultListener {
 
     fun startPayment(activity: Activity, amount: Int) {
         val checkout = Checkout()
-        checkout.setKeyID("rzp_live_REoh16s1CW0W6Q")
+        checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
 
         try {
             val options = JSONObject()

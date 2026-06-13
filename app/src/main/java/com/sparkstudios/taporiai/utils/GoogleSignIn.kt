@@ -6,7 +6,9 @@ import android.os.Build
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 
-const val CLIENT_ID = "251119098046-ih3bq53nisp3fo39p6gmrfbth4mt2msb.apps.googleusercontent.com"
+import com.sparkstudios.taporiai.BuildConfig
+
+val CLIENT_ID = BuildConfig.GOOGLE_CLIENT_ID
 
 fun refreshToken(context: Context, onRefreshed: () -> Unit = {}, onFailure: () -> Unit = {}) {
     val account = GoogleSignIn.getLastSignedInAccount(context)
