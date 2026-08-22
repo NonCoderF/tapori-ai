@@ -1,7 +1,23 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-plugins {
-    alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
-    alias(libs.plugins.kotlin.compose) apply false
-    alias(libs.plugins.kotlin.kapt) apply false
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
+
+val rootBuildDirectory = layout.buildDirectory.dir("build").get()
+layout.buildDirectory.set(rootBuildDirectory)
+
+subprojects {
+    val subprojectBuildDirectory = rootBuildDirectory.dir(project.name)
+    layout.buildDirectory.set(subprojectBuildDirectory)
+}
+
+subprojects {
+    evaluationDependsOn(":app")
+}
+
+tasks.register<Delete>("clean") {
+    delete(rootBuildDirectory)
+}
+
