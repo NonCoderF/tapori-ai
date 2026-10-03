@@ -1,0 +1,2 @@
+import {NativeModules, Platform} from 'react-native'; import {nativeDevice} from './native';
+test('native bridge wrapper returns Kotlin device info', async () => { Object.defineProperty(Platform, 'OS', {value: 'android'}); NativeModules.TaporiDevice = {getDeviceInfo: jest.fn().mockResolvedValue({manufacturer: 'Test', model: 'Device', sdk: 35})}; await expect(nativeDevice.getInfo()).resolves.toEqual({manufacturer: 'Test', model: 'Device', sdk: 35}); });

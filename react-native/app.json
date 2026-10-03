@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Tapori AI",
+    "slug": "taporiai",
+    "scheme": "taporiai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "plugins": ["expo-dev-client"],
+    "android": {
+      "package": "com.sparkstudios.tapori.ai.chatbot"
+    }
+  }
+}

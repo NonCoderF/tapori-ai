@@ -1,0 +1,4 @@
+import {ApiError} from '../../services/api'; import {chatReducer, errorMessage, initialChatState} from './chatReducer';
+test('adds a user message and marks send in progress', () => { const state = chatReducer(initialChatState, {type: 'sendStart', message: {id: '1', text: 'hello', isUser: true}}); expect(state.sending).toBe(true); expect(state.messages).toHaveLength(1); });
+test('preserves payment-required response and exposes credit prompt', () => { const state = chatReducer(initialChatState, {type: 'paymentRequired', message: {id: '2', text: 'no credits', isUser: false}, detail: 'Credits khatam'}); expect(state.paymentRequired).toBe('Credits khatam'); expect(state.sending).toBe(false); });
+test('maps authentication and timeout failures', () => { expect(errorMessage(new ApiError(401, 'expired'))).toMatch(/token/); expect(errorMessage(new ApiError(408, 'timeout'))).toMatch(/Network/); });
